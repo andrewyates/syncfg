@@ -1,0 +1,3 @@
+[submodule "libconfig"]
+	path = libconfig
+	url = https://github.com/azeey/python-libconfig.git
