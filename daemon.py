@@ -14,17 +14,21 @@ from sqlalchemy.orm import sessionmaker
 from sql import *
 
 class ConfigPage(Resource):
+    """ Responds to file and directory requests """
     isLeaf = True
+
     def render_GET(self, request):
+        """ Determine whether the request was for a file or directory and handle it. Called on every request. """
         print "request:",request
         if "dir" in request.args: # dir request?
             return self.respond_dir(request)
-        elif "file" in request.args:
+        elif "file" in request.args: # config request?
             return self.respond_file(request)
-        else:
+        else: # unknown request
             return "error: received invalid GET string"
 
     def respond_dir(self, request):
+        """ Respond to a directory request """
         dirs = []
         for k,v in request.args.items():
             if isinstance(v, list):
@@ -40,6 +44,7 @@ class ConfigPage(Resource):
         return json.dumps(out, sort_keys=False, indent=4)
 
     def get_dir_info(self, dir, host):
+        """ Prepare a directory response """
         out = []
         Session = sessionmaker(bind=self.engine)
         session = Session()
@@ -57,6 +62,7 @@ class ConfigPage(Resource):
         return out
 
     def walk_dir(self, dirout, dirname, names):
+        """ Walk a directory tree and keep track of the files inside """
         basedir = dirname.replace(self.DIR_DIR,"")
         dirout["dirs"].append(basedir)
         for filename in names:
@@ -65,6 +71,7 @@ class ConfigPage(Resource):
                 dirout["files"].append(os.path.join(basedir,str(filename)))
 
     def respond_file(self, request):
+        """ Respond to a file request """
         files = []
         hashes = []
 
@@ -87,6 +94,7 @@ class ConfigPage(Resource):
         return json.dumps(out, sort_keys=False, indent=4)
 
     def check_file(self, file, hash, host):
+        """ Check whether the remote file is up to date and return an appropriate response """
         out = {}
         out['filename'] = file
         out['your_hash'] = hash
@@ -101,6 +109,7 @@ class ConfigPage(Resource):
         return out
 
     def get_file(self, file, host):
+        """ Find file and return a (file, permissions) pair """
         #TODO cache DB conn
         Session = sessionmaker(bind=self.engine)
         session = Session()
@@ -144,6 +153,7 @@ class ConfigPage(Resource):
         return (None, None)
 
     def get_latest_hash(self, file, host):
+        """ Calculate file's latest hash """
         text, perms = self.get_file(file, host)
         if text != None:
             sha = hashlib.sha512()
@@ -162,6 +172,7 @@ class ConfigPage(Resource):
 
     # Note: on connection this is called first once with CA cert and again with client cert
     def verifyCallback(self, connection, x509, errnum, errdepth, ok):
+        """ Determine whether the SSL connection should be allowed """
         if not ok:
             print 'info: invalid cert received:', x509.get_subject()
             return False
@@ -179,6 +190,7 @@ class ConfigPage(Resource):
             return False
 
 def prepare_server(basedir):
+    """ Prepare a ConfigPage object with reasonable defaults and return a (port, Resource, ContextFactory) tuple """
     r = ConfigPage()
     r.BASE_DIR = basedir + os.path.sep
     r.CONFIG_DIR = os.path.join(r.BASE_DIR, "configs") + os.path.sep
@@ -199,7 +211,6 @@ def prepare_server(basedir):
     ctx.load_verify_locations(r.CA_PUBKEY)
 
     return (7080, r, contextFactory)
-
 
 engine = None
 
