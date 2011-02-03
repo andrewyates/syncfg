@@ -1,10 +1,10 @@
-from optparse import OptionParser
 import hashlib
 import json
 import os
 import shutil
 import stat
 import sys
+from optparse import OptionParser
 
 from OpenSSL.SSL import Context, VERIFY_PEER, VERIFY_FAIL_IF_NO_PEER_CERT
 from OpenSSL.crypto import load_certificate, FILETYPE_PEM
@@ -15,6 +15,7 @@ from twisted.internet import reactor, ssl
 from twisted.web.client import getPage
 
 class HTTPSVerifyingContextFactory(ContextFactory):
+    """ ContextFactory for connecting to syncfgd with HTTPS and a client key """
     isClient = True
 
     def __init__(self, hostname):
@@ -36,15 +37,19 @@ class HTTPSVerifyingContextFactory(ContextFactory):
         return preverifyOK
 
 class Retriever:
+    """ Requests and retrieves files and directories from the config server """
     def __init__(self):
         self.reqs = 0
         self.ret_code = 0
 
     def get(self, url):
+        """ Retrieve a URL """
         httpsctx = HTTPSVerifyingContextFactory(URLPath(url).netloc)
         return getPage(url, httpsctx)
 
     def process_response(self, resp):
+        """ Process the server's response to a file request, updating the current file if it is oudated """
+
         if resp['status'] != "outdated":
             return
 
@@ -91,18 +96,21 @@ class Retriever:
             return
 
     def add_file(self, url):
+        """ Add a file to be retrieved """
         req=self.get(url)
         req.addCallback(self.done_file)
         req.addErrback(self.error)
         self.reqs += 1
 
     def add_dir(self, url):
+        """ Add a directory to be retrieved """
         req=self.get(url)
         req.addCallback(self.done_dir)
         req.addErrback(self.error)
         self.reqs += 1
                         
     def done_dir(self, result):
+        """ Receive and handle the server's response to a directory request """
         self.reqs -= 1
 
         responses = json.loads(result)
@@ -123,6 +131,7 @@ class Retriever:
         self.stop_if_done()
 
     def done_file(self, result):
+        """ Receive and handle the server's response to a file request """
         self.reqs -= 1
         responses = json.loads(result)
         for resp in responses:
@@ -130,16 +139,19 @@ class Retriever:
         self.stop_if_done()
 
     def error(self, error):
+        """ Callback for errors encountered when communicating with the server """
         self.reqs -= 1
         print >> sys.stderr, 'error making SSL request:',error.getErrorMessage()
         self.ret_code = 3
         self.stop_if_done()
 
     def stop_if_done(self):
+        """ Stop the reactor if all pending file and dir requests have been completed """
         if self.reqs < 1:
             reactor.stop()
                 
     def hash(self, filename):
+        """ Return filename's SHA-512 hexdigest or -1 if filename does not exist """
         if not os.path.exists(filename):
             return -1
 
@@ -164,9 +176,8 @@ def dir_cb(option, opt, value, parser):
 def main(infiles, indirs):
     files = []
     csums = []
-    walker = Walker()
         
-    # check file args
+    # store requested files and their hashes
     for infile in infiles:
         files.append(infile)
 
@@ -176,25 +187,18 @@ def main(infiles, indirs):
         else:
             csums.append(0)
 
+    # queue server requests for the requested directories
     for indir in indirs:
         retriever.add_dir("https://%s?dir=%s" % (SERVER, indir))
 
+    # queue server requests for the requested files
     for file,csum in zip(files,csums):
         sanefile = file.replace(HOMEDIR,"")
         retriever.add_file("https://%s?file=%s&hash=%s" % (SERVER, sanefile, csum))
-        #get=retriever.get("https://%s?file=%s&hash=%s" % (SERVER, sanefile, csum))
-        #get.addCallback(retriever.done)
-        #get.addErrback(retriever.error)
     
+    # fetch requested files and dirs
     reactor.run()
     exit(retriever.ret_code)
-
-class Walker:
-    def walk_dir(self, dirout, dirname, names):
-        for filename in names:
-            path = os.path.join(dirname, filename)
-            if not os.path.isdir(path):
-                dirout.append(path)
 
 STAGING_DIR = os.path.expanduser("~/tmp/syncfg/stage/")
 BACKUP_DIR = os.path.expanduser("~/tmp/syncfg/backup/")
@@ -208,6 +212,7 @@ parser = OptionParser()
 parser.add_option("-f", "--file", action="callback", help="write report to FILE", callback=file_cb, type="string")
 parser.add_option("-d", "--dir", action="callback", help="write report to FILE", callback=dir_cb, type="string")
 
+# use a safe default umask
 os.umask(077)
 
 (options, args) = parser.parse_args()
