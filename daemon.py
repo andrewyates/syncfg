@@ -6,6 +6,7 @@ import sys
 import time
 
 from OpenSSL import SSL
+from pylibconfig import Config
 from twisted.internet import reactor, ssl
 from twisted.web.resource import Resource
 from twisted.web import server
@@ -46,6 +47,8 @@ class ConfigPage(Resource):
     def get_dir_info(self, dir, host):
         """ Prepare a directory response """
         out = []
+        #TODO
+        #for dir in get_dirs(host):
         Session = sessionmaker(bind=self.engine)
         session = Session()
         for res in (session.query(Dir, DirHost, Host)
@@ -110,13 +113,13 @@ class ConfigPage(Resource):
 
     def get_file(self, file, host):
         """ Find file and return a (file, permissions) pair """
-        #TODO cache DB conn
-        Session = sessionmaker(bind=self.engine)
-        session = Session()
         out = ""
         found = False
         perm = None
-
+        #TODO
+        #for cfg in get_configs(file, host)
+        Session = sessionmaker(bind=self.engine)
+        session = Session()
         for cfg in (session.query(Config,ConfigPart,Host)
                     .filter(Config.id==ConfigPart.config_id)
                     .filter(Config.host_id==Host.id)
@@ -177,6 +180,8 @@ class ConfigPage(Resource):
             print 'info: invalid cert received:', x509.get_subject()
             return False
 
+        #TODO
+        #if fingerprint_valid(host, fingerprint):
         Session = sessionmaker(bind=self.engine)
         session = Session()
         query = (session.query(Host)
@@ -185,8 +190,8 @@ class ConfigPage(Resource):
         if query.first():
             return True
         else:
-            # host does not exist in DB
-            print 'warning: denying connection with cert that validates but does not exist in DB:', x509.get_subject(), x509.digest("sha512")
+            # unknown host
+            print 'warning: denying connection from a cert that validates but does not exist in the config:', x509.get_subject(), x509.digest("sha512")
             return False
 
 def prepare_server(basedir):
@@ -223,6 +228,11 @@ def main():
     if not os.path.isdir(basedir):
         print >> sys.stderr, "error: base directory '%s' does not exist" % basedir
         exit(4)
+
+    config = Config()
+    config.readFile("config")
+    print config
+    exit(1)
 
     port, configPage, contextFactory = prepare_server(basedir)
     site = server.Site(configPage)

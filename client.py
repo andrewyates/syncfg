@@ -23,6 +23,7 @@ class HTTPSVerifyingContextFactory(ContextFactory):
 
     def getContext(self):
         contextFactory = ssl.DefaultOpenSSLContextFactory(
+            #TODO move to config file
             '/home/andrew/tmp/syncfg/keys/client.key', '/home/andrew/tmp/syncfg/keys/client.crt'
             )
         ctx = contextFactory.getContext()
@@ -32,7 +33,7 @@ class HTTPSVerifyingContextFactory(ContextFactory):
 
     def verifyHostname(self, connection, x509, errno, depth, preverifyOK):
         if preverifyOK:
-            if self.hostname == x509.get_subject().commonName:
+            if self.hostname == x509.get_subject().commonName: #TODO what's this doing?!
                 return False
         return preverifyOK
 
@@ -200,6 +201,7 @@ def main(infiles, indirs):
     reactor.run()
     exit(retriever.ret_code)
 
+#TODO move to config file
 STAGING_DIR = os.path.expanduser("~/tmp/syncfg/stage/")
 BACKUP_DIR = os.path.expanduser("~/tmp/syncfg/backup/")
 #HOMEDIR = os.path.expanduser("~/")
