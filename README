@@ -5,10 +5,15 @@ Requirements:
 Server:
 - Create a CA, sign a server key with it, sign client keys with it, and distribute the client keys to your clients.
   The easy-rsa scripts from OpenVPN are the easiest way to do that. See /usr/share/doc/openvpn/examples/easy-rsa
+- On the server, the following keys should be present in the base directory:
+  keys/ca.crt
+  keys/server.crt
+  keys/server.key
+  If you want to store the SSL certs to an alternate location, edit service.tac.
 - Rename config.sample to config, copy to your base directory (~/.config/syncfgd/ by default), and edit it
 - Create your config file parts in the configs directory in your base directory (~/.config/syncfgd/configs by default)
 - Populate the dirs directory with any required static files
-- Launch the daemon with twistd -ny service.trac or use the start-server.sh and stop-server.sh scripts
+- Launch the daemon with twistd -ny service.tac or use the start-server.sh and stop-server.sh scripts
 
 Client:
 - On each client, copy client-config.sample to ~/.config/syncfg/config and edit
