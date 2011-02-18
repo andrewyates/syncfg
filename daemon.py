@@ -164,7 +164,7 @@ class ConfigPage(Resource):
                 self.add_file(files, hashes, k, v)
 
         if len(files) != len(hashes):
-            raise ValueError("file/hash count mismatch")
+            raise ValueError("file/hash count mismatch"
 
         host = self.config_fqdn_to_name(request.channel.transport.getPeerCertificate().get_subject().commonName)
 
@@ -247,7 +247,6 @@ class ConfigPage(Resource):
                 print >> sys.stderr, "IOError opening file:",e
 
         # if file not found, check static dirs for it
-        # TODO add check so this doesn't return files not actually in static dirs
         if found:
             return (out, perm)
         else:
