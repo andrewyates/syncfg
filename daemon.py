@@ -196,9 +196,9 @@ class ConfigPage(Resource):
         return (name, files)
 
     def config_get_configs(self, file, host):
-        mapkey = (host, file)
-        if mapkey in self.host2config:
-            return self.host2config[mapkey]
+        key = (host, file)
+        if key in self.host2config:
+            return self.host2config[key]
 
         files = []
         key = host + '.configs'
@@ -207,7 +207,7 @@ class ConfigPage(Resource):
             if name == file:
                 files = n_files
 
-        self.host2config[mapkey] = files # cache list of file's sources
+        self.host2config[key] = files # cache list of file's sources
         return files
 
     def get_file(self, file, host):
