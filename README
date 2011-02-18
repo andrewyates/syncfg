@@ -1,3 +1,9 @@
+syncfg is a system for synchronizing config files and static directories.
+Config files are comprised of config "sources" (or "parts") that are appended to create the final config file. The list of config sources comprising each config file can be different for each host. syncfg provides two advantages over the traditional configuration management:
+- configs are only edited once and in one place (the syncfgd server) and may easily be managed with git there
+- changes to a config are propagated to all clients with no manual intervention
+As you may imagine, this requires that one chooses logical config parts. Static directory exists to help keep scripts and libraries in sync, such as the elisp libs in .emacs.d/lisp/. Directories are not made up of multiple parts as configs are.
+
 Requirements:
 - libconfig (on Ubuntu systems install the libconfig++8-dev package)
 - python-libconfig (currently at http://github.com/azeey/python-libconfig)
