@@ -32,9 +32,6 @@ class HTTPSVerifyingContextFactory(ContextFactory):
         return ctx
 
     def verifyHostname(self, connection, x509, errno, depth, preverifyOK):
-        if preverifyOK:
-            if self.hostname == x509.get_subject().commonName: #TODO what's this doing?!
-                return False
         return preverifyOK
 
 class Retriever:
