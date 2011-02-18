@@ -6,17 +6,18 @@ import sys
 import time
 
 from OpenSSL import SSL
-from pylibconfig import Config
+import pylibconfig 
 from twisted.internet import reactor, ssl
 from twisted.web.resource import Resource
 from twisted.web import server
-from sqlalchemy.orm import sessionmaker
+#from sqlalchemy.orm import sessionmaker
 
-from sql import *
+#from sql import *
 
 class ConfigPage(Resource):
     """ Responds to file and directory requests """
     isLeaf = True
+    fqdn2name = {}
 
     def render_GET(self, request):
         """ Determine whether the request was for a file or directory and handle it. Called on every request. """
@@ -37,27 +38,33 @@ class ConfigPage(Resource):
             else:
                 dirs.append(v)
 
-        host = request.channel.transport.getPeerCertificate().get_subject().commonName
+        host = self.config_fqdn_to_name(request.channel.transport.getPeerCertificate().get_subject().commonName)
         out = []
         for dir in dirs:
             out.extend(self.get_dir_info(dir, host))
 
         return json.dumps(out, sort_keys=False, indent=4)
 
+    def config_get_dirs(self, host):
+        dirs = []
+        key = host + ".dirs"
+        for dirkey in config.children(key):
+            dir, valid = config.value(dirkey)
+            if valid: dirs.append(dir)
+        return dirs
+
     def get_dir_info(self, dir, host):
         """ Prepare a directory response """
         out = []
-        #TODO
-        #for dir in get_dirs(host):
-        Session = sessionmaker(bind=self.engine)
-        session = Session()
-        for res in (session.query(Dir, DirHost, Host)
-                    .filter(Dir.id==DirHost.dir_id)
-                    .filter(DirHost.host_id==Host.id)
-                    .filter(Host.hostname == host)):
+        for dir in self.config_get_dirs(host):
+        #for res in (session.query(Dir, DirHost, Host)
+        #            .filter(Dir.id==DirHost.dir_id)
+        #            .filter(DirHost.host_id==Host.id)
+        #            .filter(Host.hostname == host)):
             dirout = {}
             out.append(dirout)
-            dirout["dir"] = res[0].dir
+            dirout["dir"] = dir
+            #dirout["dir"] = res[0].dir
             dirout["dirs"] = []
             dirout["files"] = []
             os.path.walk(os.path.join(self.DIR_DIR,dirout["dir"]), self.walk_dir, dirout);
@@ -88,7 +95,7 @@ class ConfigPage(Resource):
         if len(files) != len(hashes):
             raise ValueError("file/hash count mismatch")
 
-        host = request.channel.transport.getPeerCertificate().get_subject().commonName
+        host = self.config_fqdn_to_name(request.channel.transport.getPeerCertificate().get_subject().commonName)
 
         out = []
         for file,hash in zip(files,hashes):
@@ -111,23 +118,42 @@ class ConfigPage(Resource):
             out['new_file'], out['permissions'] = self.get_file(file, host)
         return out
 
+    def config_get_configs(self, file, host):
+        #TODO cache config name -> source mapping instead of iterating every lookup
+        files = []
+        key = host + '.configs'
+        for cfgkey in config.children(key):
+            namekey = cfgkey+ '.name'
+            srckey = cfgkey+ '.source'
+            name, nameValid = config.value(namekey)
+            if not nameValid:
+                print >> sys.stderr, "error: config block missing name key: ",namekey
+                return None
+            for srcfilekey in config.children(srckey):
+                filename, valid = config.value(srcfilekey)
+                if not valid:
+                    print >> sys.stderr, "error: error in config block with key: ",srcfilekey
+                    return None
+                files.append(filename)
+        return files
+
     def get_file(self, file, host):
         """ Find file and return a (file, permissions) pair """
         out = ""
         found = False
         perm = None
-        #TODO
-        #for cfg in get_configs(file, host)
-        Session = sessionmaker(bind=self.engine)
-        session = Session()
-        for cfg in (session.query(Config,ConfigPart,Host)
-                    .filter(Config.id==ConfigPart.config_id)
-                    .filter(Config.host_id==Host.id)
-                    .filter(Config.file == file)
-                    .filter(Host.hostname == host)
-                    .order_by(ConfigPart.rank)):
+        for cfg in self.config_get_configs(file, host):
+        #Session = sessionmaker(bind=self.engine)
+        #session = Session()
+        #for cfg in (session.query(Config,ConfigPart,Host)
+        #            .filter(Config.id==ConfigPart.config_id)
+        #            .filter(Config.host_id==Host.id)
+        #            .filter(Config.file == file)
+        #            .filter(Host.hostname == host)
+        #            .order_by(ConfigPart.rank)):
             try:
-                filepath = os.path.join(self.CONFIG_DIR,cfg[1].file)
+                #filepath = os.path.join(self.CONFIG_DIR,cfg[1].file)
+                filepath = os.path.join(self.CONFIG_DIR,cfg)
                 f = open(filepath)
                 out += f.read()
                 f.close()
@@ -136,7 +162,7 @@ class ConfigPage(Resource):
                     perm = thisperm
                 found = True
             except IOError, e:
-                print >> sys.stderr, "IOError opening file from DB:",e
+                print >> sys.stderr, "IOError opening file:",e
 
         # if file not found, check static dirs for it
         # TODO add check so this doesn't return files not actually in static dirs
@@ -151,7 +177,7 @@ class ConfigPage(Resource):
                 perm = stat.S_IMODE(os.stat(filepath).st_mode)
                 return (out, perm)
             except IOError, e:
-                print >> sys.stderr, "IOError opening file from DB:",e
+                print >> sys.stderr, "IOError opening file:",e
 
         return (None, None)
 
@@ -173,6 +199,38 @@ class ConfigPage(Resource):
         else:
             raise ValueError("unknown key: %s" % key)
 
+    def config_fqdn_to_name(self, host):
+        if host in self.fqdn2name:
+            return self.fqdn2name[host]
+
+        for hostkey in config.children():
+            fqdnkey = hostkey+".fqdn"
+            fqdn, valid = config.value(fqdnkey)
+            if valid and fqdn == host:
+                self.fqdn2name[host] = hostkey
+                return hostkey
+        return None
+            
+
+    def config_fingerprint_valid(self, host, fingerprint):
+        CA, valid = config.value("CA")
+        CAfp, fpValid = config.value("CA_fingerprint")
+        if not valid or not fpValid:
+            return False
+
+        # check the CA's fingerprint seperately from the other hosts
+        if len(CA) > 1 and CA == host and CAfp == fingerprint:
+            return True
+
+        host = self.config_fqdn_to_name(host)
+
+        fpkey = host + ".fingerprint"
+        config_fp, valid = config.value(fpkey)
+        if not valid:
+            return False
+        else:
+            return config_fp == fingerprint
+
     # Note: on connection this is called first once with CA cert and again with client cert
     def verifyCallback(self, connection, x509, errnum, errdepth, ok):
         """ Determine whether the SSL connection should be allowed """
@@ -180,14 +238,13 @@ class ConfigPage(Resource):
             print 'info: invalid cert received:', x509.get_subject()
             return False
 
-        #TODO
-        #if fingerprint_valid(host, fingerprint):
-        Session = sessionmaker(bind=self.engine)
-        session = Session()
-        query = (session.query(Host)
-                 .filter(Host.hostname == x509.get_subject().commonName)
-                 .filter(Host.fingerprint == x509.digest("sha512")))
-        if query.first():
+        if self.config_fingerprint_valid(x509.get_subject().commonName, x509.digest("sha512")):
+        #Session = sessionmaker(bind=self.engine)
+        #session = Session()
+        #query = (session.query(Host)
+        #         .filter(Host.hostname == x509.get_subject().commonName)
+        #         .filter(Host.fingerprint == x509.digest("sha512")))
+        #if query.first():
             return True
         else:
             # unknown host
@@ -203,8 +260,8 @@ def prepare_server(basedir):
     r.PRIVKEY = os.path.join(r.BASE_DIR,'keys/server.key')
     r.PUBKEY = os.path.join(r.BASE_DIR, 'keys/server.crt')
     r.CA_PUBKEY = os.path.join(r.BASE_DIR,"keys/ca.crt")
-    r.DB_URL = "sqlite:///"+ r.BASE_DIR + "sqlite"
-    r.engine = init_engine(r.DB_URL)
+    #r.DB_URL = "sqlite:///"+ r.BASE_DIR + "sqlite"
+    #r.engine = init_engine(r.DB_URL)
 
 
     contextFactory = ssl.DefaultOpenSSLContextFactory(r.PRIVKEY, r.PUBKEY)
@@ -218,6 +275,7 @@ def prepare_server(basedir):
     return (7080, r, contextFactory)
 
 engine = None
+config = pylibconfig.Config()
 
 def main():
     if len(sys.argv) != 2:
@@ -229,10 +287,8 @@ def main():
         print >> sys.stderr, "error: base directory '%s' does not exist" % basedir
         exit(4)
 
-    config = Config()
     config.readFile("config")
     print config
-    exit(1)
 
     port, configPage, contextFactory = prepare_server(basedir)
     site = server.Site(configPage)
