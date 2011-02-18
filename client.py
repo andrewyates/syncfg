@@ -24,11 +24,10 @@ class HTTPSVerifyingContextFactory(ContextFactory):
 
     def getContext(self):
         contextFactory = ssl.DefaultOpenSSLContextFactory(
-            #TODO move to config file
-            '/home/andrew/tmp/syncfg/keys/client.key', '/home/andrew/tmp/syncfg/keys/client.crt'
+            config['private_key'], config['public_key']
             )
         ctx = contextFactory.getContext()
-        ctx.load_verify_locations("/home/andrew/tmp/syncfg/keys/ca.crt")
+        ctx.load_verify_locations(config['ca_key'])
         ctx.set_verify(VERIFY_PEER | VERIFY_FAIL_IF_NO_PEER_CERT, self.verifyHostname)
         return ctx
 
@@ -208,22 +207,22 @@ def parse_config_file(filename):
     cfg = pylibconfig.Config()
     cfg.readFile(filename)
 
-    for stmt in ['staging_dir', 'backup_dir', 'home_dir', 'server']:
+    for stmt in ['staging_dir', 'backup_dir', 'home_dir', 'server', 'private_key', 'public_key', 'ca_key']:
         value, valid = cfg.value(stmt)
         if not valid:
             print >> sys.stderr, "error: config file missing '%s' statement" % stmt
             sys.exit(1)
         
-        if value[-1] != os.path.sep: # make sure all paths end with a /
+        if value[-1] != os.path.sep and value[-4:len(value)] == "_dir": # make sure all paths end with a /
             value += os.path.sep
-        config[stmt] = value
+        config[stmt] = os.path.expanduser(value)
 
     return config
 
 config = parse_config_file(os.path.expanduser("~/.config/syncfg/config"))
-STAGING_DIR = os.path.expanduser(config['staging_dir'])
-BACKUP_DIR = os.path.expanduser(config['backup_dir'])
-HOMEDIR = os.path.expanduser(config['home_dir'])
+STAGING_DIR = config['staging_dir']
+BACKUP_DIR = config['backup_dir']
+HOMEDIR = config['home_dir']
 SERVER = config['server']
 
 fileargs = []
