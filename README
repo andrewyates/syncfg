@@ -12,7 +12,7 @@ Server:
   If you want to store the SSL certs to an alternate location, edit service.tac.
 - Rename config.sample to config, copy to your base directory (~/.config/syncfgd/ by default), and edit it
 - Create your config file parts in the configs directory in your base directory (~/.config/syncfgd/configs by default)
-- Populate the dirs directory with any required static files
+- Populate the dirs directory with any required static files (~/.config/syncfgd/dirs)
 - Launch the daemon with twistd -ny service.tac or use the start-server.sh and stop-server.sh scripts
 
 Client:
