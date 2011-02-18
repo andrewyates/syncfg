@@ -10,9 +10,6 @@ import pylibconfig
 from twisted.internet import reactor, ssl
 from twisted.web.resource import Resource
 from twisted.web import server
-#from sqlalchemy.orm import sessionmaker
-
-#from sql import *
 
 class ConfigPage(Resource):
     """ Responds to file and directory requests """
@@ -116,14 +113,9 @@ class ConfigPage(Resource):
         """ Prepare a directory response """
         out = []
         for dir in self.config_get_dirs(host):
-        #for res in (session.query(Dir, DirHost, Host)
-        #            .filter(Dir.id==DirHost.dir_id)
-        #            .filter(DirHost.host_id==Host.id)
-        #            .filter(Host.hostname == host)):
             dirout = {}
             out.append(dirout)
             dirout["dir"] = dir
-            #dirout["dir"] = res[0].dir
             dirout["dirs"] = []
             dirout["files"] = []
             os.path.walk(os.path.join(self.DIR_DIR,dirout["dir"]), self.walk_dir, dirout);
@@ -216,16 +208,7 @@ class ConfigPage(Resource):
         found = False
         perm = None
         for cfg in self.config_get_configs(file, host):
-        #Session = sessionmaker(bind=self.engine)
-        #session = Session()
-        #for cfg in (session.query(Config,ConfigPart,Host)
-        #            .filter(Config.id==ConfigPart.config_id)
-        #            .filter(Config.host_id==Host.id)
-        #            .filter(Config.file == file)
-        #            .filter(Host.hostname == host)
-        #            .order_by(ConfigPart.rank)):
             try:
-                #filepath = os.path.join(self.CONFIG_DIR,cfg[1].file)
                 filepath = os.path.join(self.CONFIG_DIR,cfg)
                 f = open(filepath)
                 out += f.read()
@@ -320,12 +303,6 @@ class ConfigPage(Resource):
             return False
 
         if self.config_fingerprint_valid(x509.get_subject().commonName, x509.digest("sha512")):
-        #Session = sessionmaker(bind=self.engine)
-        #session = Session()
-        #query = (session.query(Host)
-        #         .filter(Host.hostname == x509.get_subject().commonName)
-        #         .filter(Host.fingerprint == x509.digest("sha512")))
-        #if query.first():
             return True
         else:
             # unknown host
