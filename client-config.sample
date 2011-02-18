@@ -1,0 +1,14 @@
+# this config must go in ~/.config/syncfg/config
+
+# directory to create new configs in before moving them to home_dir
+staging_dir = "~/.config/syncfg/stage/";
+
+# directory to backup configs in when they are replaced
+backup_dir = "~/.config/syncfg/backup";
+
+# final destination directory for config files
+# this should normally be "~"
+home_dir = "~";
+
+# syncfgd server in the format host:port
+server = "example.org:7080";

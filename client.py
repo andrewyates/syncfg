@@ -8,6 +8,7 @@ from optparse import OptionParser
 
 from OpenSSL.SSL import Context, VERIFY_PEER, VERIFY_FAIL_IF_NO_PEER_CERT
 from OpenSSL.crypto import load_certificate, FILETYPE_PEM
+import pylibconfig
 from twisted.python.urlpath import URLPath
 from twisted.internet.ssl import ContextFactory
 from twisted.internet.error import ConnectionRefusedError
@@ -201,12 +202,29 @@ def main(infiles, indirs):
     reactor.run()
     exit(retriever.ret_code)
 
-#TODO move to config file
-STAGING_DIR = os.path.expanduser("~/tmp/syncfg/stage/")
-BACKUP_DIR = os.path.expanduser("~/tmp/syncfg/backup/")
-#HOMEDIR = os.path.expanduser("~/")
-HOMEDIR = os.path.expanduser("~/tmp/syncfg/home/")
-SERVER = "samizdat.odos.me:7080"
+def parse_config_file(filename):
+    """ Parse config file and return a dict of statements """
+    config = {}
+    cfg = pylibconfig.Config()
+    cfg.readFile(filename)
+
+    for stmt in ['staging_dir', 'backup_dir', 'home_dir', 'server']:
+        value, valid = cfg.value(stmt)
+        if not valid:
+            print >> sys.stderr, "error: config file missing '%s' statement" % stmt
+            sys.exit(1)
+        
+        if value[-1] != os.path.sep: # make sure all paths end with a /
+            value += os.path.sep
+        config[stmt] = value
+
+    return config
+
+config = parse_config_file(os.path.expanduser("~/.config/syncfg/config"))
+STAGING_DIR = os.path.expanduser(config['staging_dir'])
+BACKUP_DIR = os.path.expanduser(config['backup_dir'])
+HOMEDIR = os.path.expanduser(config['home_dir'])
+SERVER = config['server']
 
 fileargs = []
 dirargs = []
