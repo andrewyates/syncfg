@@ -17,7 +17,6 @@ from twisted.web import server
 class ConfigPage(Resource):
     """ Responds to file and directory requests """
     isLeaf = True
-    fqdn2name = {}
 
     def render_GET(self, request):
         """ Determine whether the request was for a file or directory and handle it. Called on every request. """
@@ -46,12 +45,29 @@ class ConfigPage(Resource):
         return json.dumps(out, sort_keys=False, indent=4)
 
     def config_get_dirs(self, host):
+        if host in self.host2dir:
+            return self.host2dir[host]
+
         dirs = []
         key = host + ".dirs"
-        for dirkey in config.children(key):
-            dir, valid = config.value(dirkey)
+        for dirkey in self.config.children(key):
+            dir, valid = self.config.value(dirkey)
             if valid: dirs.append(dir)
+        
+        self.host2dir[host] = dirs
         return dirs
+
+    def config_load(self):
+        """ Loads the config file """
+        self.config_reload()
+
+    def config_reload(self):
+        """ Reloads the config file and clears all cached values """
+        self.config = pylibconfig.Config()
+        self.config.readFile(self.CONFIG_FILE)
+        self.fqdn2name = {}
+        self.host2config = {}
+        self.host2dir = {}
 
     def get_dir_info(self, dir, host):
         """ Prepare a directory response """
@@ -119,22 +135,29 @@ class ConfigPage(Resource):
         return out
 
     def config_get_configs(self, file, host):
-        #TODO cache config name -> source mapping instead of iterating every lookup
+        mapkey = (host, file)
+        if mapkey in self.host2config:
+            return self.host2config[mapkey]
+
         files = []
         key = host + '.configs'
-        for cfgkey in config.children(key):
+        for cfgkey in self.config.children(key):
             namekey = cfgkey+ '.name'
             srckey = cfgkey+ '.source'
-            name, nameValid = config.value(namekey)
+            name, nameValid = self.config.value(namekey)
             if not nameValid:
                 print >> sys.stderr, "error: config block missing name key: ",namekey
                 return None
-            for srcfilekey in config.children(srckey):
-                filename, valid = config.value(srcfilekey)
+            if name != file:
+                continue
+            for srcfilekey in self.config.children(srckey):
+                filename, valid = self.config.value(srcfilekey)
                 if not valid:
                     print >> sys.stderr, "error: error in config block with key: ",srcfilekey
                     return None
                 files.append(filename)
+
+        self.host2config[mapkey] = files # cache list of file's sources
         return files
 
     def get_file(self, file, host):
@@ -169,15 +192,23 @@ class ConfigPage(Resource):
         if found:
             return (out, perm)
         else:
-            try:
-                filepath = os.path.join(self.DIR_DIR,file)
-                f = open(filepath)
-                out += f.read()
-                f.close()
-                perm = stat.S_IMODE(os.stat(filepath).st_mode)
-                return (out, perm)
-            except IOError, e:
-                print >> sys.stderr, "IOError opening file:",e
+            dirs = self.config_get_dirs(host)
+            inStaticDir = False
+            for dir in dirs:
+                if file.find(dir) == 0:
+                    inStaticDir = True
+                    break
+
+            if inStaticDir:    
+                try:
+                    filepath = os.path.join(self.DIR_DIR,file)
+                    f = open(filepath)
+                    out += f.read()
+                    f.close()
+                    perm = stat.S_IMODE(os.stat(filepath).st_mode)
+                    return (out, perm)
+                except IOError, e:
+                    print >> sys.stderr, "IOError opening file:",e
 
         return (None, None)
 
@@ -203,9 +234,9 @@ class ConfigPage(Resource):
         if host in self.fqdn2name:
             return self.fqdn2name[host]
 
-        for hostkey in config.children():
+        for hostkey in self.config.children():
             fqdnkey = hostkey+".fqdn"
-            fqdn, valid = config.value(fqdnkey)
+            fqdn, valid = self.config.value(fqdnkey)
             if valid and fqdn == host:
                 self.fqdn2name[host] = hostkey
                 return hostkey
@@ -213,8 +244,8 @@ class ConfigPage(Resource):
             
 
     def config_fingerprint_valid(self, host, fingerprint):
-        CA, valid = config.value("CA")
-        CAfp, fpValid = config.value("CA_fingerprint")
+        CA, valid = self.config.value("CA")
+        CAfp, fpValid = self.config.value("CA_fingerprint")
         if not valid or not fpValid:
             return False
 
@@ -225,7 +256,7 @@ class ConfigPage(Resource):
         host = self.config_fqdn_to_name(host)
 
         fpkey = host + ".fingerprint"
-        config_fp, valid = config.value(fpkey)
+        config_fp, valid = self.config.value(fpkey)
         if not valid:
             return False
         else:
@@ -260,9 +291,7 @@ def prepare_server(basedir):
     r.PRIVKEY = os.path.join(r.BASE_DIR,'keys/server.key')
     r.PUBKEY = os.path.join(r.BASE_DIR, 'keys/server.crt')
     r.CA_PUBKEY = os.path.join(r.BASE_DIR,"keys/ca.crt")
-    #r.DB_URL = "sqlite:///"+ r.BASE_DIR + "sqlite"
-    #r.engine = init_engine(r.DB_URL)
-
+    r.CONFIG_FILE = os.path.join(r.BASE_DIR, "config")
 
     contextFactory = ssl.DefaultOpenSSLContextFactory(r.PRIVKEY, r.PUBKEY)
     ctx = contextFactory.getContext()
@@ -275,7 +304,6 @@ def prepare_server(basedir):
     return (7080, r, contextFactory)
 
 engine = None
-config = pylibconfig.Config()
 
 def main():
     if len(sys.argv) != 2:
@@ -287,10 +315,9 @@ def main():
         print >> sys.stderr, "error: base directory '%s' does not exist" % basedir
         exit(4)
 
-    config.readFile("config")
-    print config
-
     port, configPage, contextFactory = prepare_server(basedir)
+    configPage.config_load()
+
     site = server.Site(configPage)
     reactor.listenSSL(port, site, contextFactory)
     reactor.run()

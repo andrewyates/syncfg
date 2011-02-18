@@ -19,8 +19,11 @@ port, configPage, contextFactory = daemon.prepare_server("/home/andrew/tmp/syncf
 #configPage.PRIVKEY = os.path.join(configPage.BASE_DIR,'keys/server.key')
 #configPage.PUBKEY = os.path.join(configPage.BASE_DIR, 'keys/server.crt')
 #configPage.CA_PUBKEY = os.path.join(configPage.BASE_DIR,"keys/ca.crt")
-#configPage.DB_URL = "sqlite:///"+ configPage.BASE_DIR + "sqlite"
+#configPage.CONFIG_FILE = os.path.join(configPage.BASE_DIR, "config")
+
 ################################################################################
+
+configPage.config_load()
 
 application = service.Application("syncfgd")
 site = server.Site(configPage)
