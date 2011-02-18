@@ -10,7 +10,7 @@ sharedHost:
      (
       {
            name = ".gitconfig";
-           source = "gitconfig";
+           source = ["gitconfig"];
       }
      );
 };
