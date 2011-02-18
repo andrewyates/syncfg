@@ -22,8 +22,25 @@ class ConfigPage(Resource):
             return self.respond_dir(request)
         elif "file" in request.args: # config request?
             return self.respond_file(request)
+        elif "list" in request.args: # config&dir list request?
+            return self.respond_list(request)
         else: # unknown request
             return "error: received invalid GET string"
+
+    def respond_list(self, request):
+        """ Respond to a request for a list of all managed configs and directories """
+
+        host = self.config_fqdn_to_name(request.channel.transport.getPeerCertificate().get_subject().commonName)
+
+        self.config_cache_configs(host)
+        dirs = self.config_get_dirs(host)
+
+        out = []
+        cfgs = {"configs": self.host2config[host]}
+        dirs = {"dirs": dirs}
+        out.extend([cfgs])
+        out.extend([dirs])
+        return json.dumps(out,sort_keys=False, indent=4)
 
     def respond_dir(self, request):
         """ Respond to a directory request """
@@ -63,8 +80,9 @@ class ConfigPage(Resource):
         self.config = pylibconfig.Config()
         self.config.readFile(self.CONFIG_FILE)
         self.fqdn2name = {}   # caches FQDN to host name mappings
-        self.host2config = {} # caches (host name, config name) to config files mappings
+        self.host2config = {} # caches host name to config name to config files mappings (host -> name -> file list)
         self.host2dir = {}    # caches host name to static directory list mappings
+        self.cached_host_configs = set([])
 
         # map shared hosts to lists of their configs
         shost2configs = {}
@@ -89,10 +107,12 @@ class ConfigPage(Resource):
             # add all the shared host's configs to the current host
             for name,sources in shost2configs[inherit]:
                 key = (host, name)
-                if key in self.host2config:
+                if host in self.host2config and name in self.host2config[host]:
                     print >> sys.stderr, "error: config %s for host %s inherited more than once" % (name,host)
                     continue
-                self.host2config[key] = sources
+                if host not in self.host2config:
+                    self.host2config[host] = {}
+                self.host2config[host][name] = sources
                 
     def config_shared_hosts(self):
         """ Return a (shared_hosts, normal_hosts) tuple consisting of:
@@ -188,19 +208,25 @@ class ConfigPage(Resource):
         return (name, files)
 
     def config_get_configs(self, file, host):
-        key = (host, file)
-        if key in self.host2config:
-            return self.host2config[key]
+        self.config_cache_configs(host)
 
-        files = []
+        if file in self.host2config[host]:
+            return self.host2config[host][file]
+        else:
+            return []
+
+    def config_cache_configs(self, host):
+        """ Cache all configs for host if host's configs have not already been cached"""
+        if host in self.cached_host_configs: # already cached?
+            return
+
         key = host + '.configs'
         for cfgkey in self.config.children(key):
-            (name, n_files) = self.config_parse_config_block(cfgkey)
-            if name == file:
-                files = n_files
-
-        self.host2config[key] = files # cache list of file's sources
-        return files
+            (name, files) = self.config_parse_config_block(cfgkey)
+            if not host in self.host2config:
+                self.host2config[host] = {}
+            self.host2config[host][name] = files # cache list of file's sources
+        self.cached_host_configs.add(host)
 
     def get_file(self, file, host):
         """ Find file and return a (file, permissions) pair """
