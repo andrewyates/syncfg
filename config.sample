@@ -1,9 +1,11 @@
 # CA's FQDN
 CA = "ca.fqdn.yourdomain.org";
 # CA's SHA512 fingerprint
+# obtain with: openssl x509 -sha512 -in ca.pem -noout -fingerprint
 CA_fingerprint = "DEAD:B33F:..."
 
-# to create a host that other hosts can inherit from, create a host with only a "configs" section
+# to create a shared host that other hosts can inherit from,
+# create a host with only a "configs" section and no other statements
 sharedHost: 
 {
      configs:
@@ -15,7 +17,8 @@ sharedHost:
      );
 };
 
-# libconfig doesn't allow periods in the name of keys, so this name must be unique but cannot be the FQDN
+# libconfig doesn't allow periods in the name of keys, 
+# so the host name must be unique but cannot be the FQDN
 hostA:
 {
      fqdn = "hostA.yourdomain.org";

@@ -1,3 +1,16 @@
 Requirements:
 - libconfig (on Ubuntu systems install the libconfig++8-dev package)
 - python-libconfig (currently at http://github.com/azeey/python-libconfig)
+
+Server:
+- Create a CA, sign a server key with it, sign client keys with it, and distribute the client keys to your clients.
+  The easy-rsa scripts from OpenVPN are the easiest way to do that. See /usr/share/doc/openvpn/examples/easy-rsa
+- Rename config.sample to config, copy to your base directory (~/.config/syncfgd/ by default), and edit it
+- Create your config file parts in the configs directory in your base directory (~/.config/syncfgd/configs by default)
+- Populate the dirs directory with any required static files
+- Launch the daemon with: twistd -ny service.trac
+
+Client:
+- On each client, copy client-config.sample to ~/.config/syncfg/config and edit
+- To update configs on a client, run: python client.py -f ~/.a_file_to_update -f ~/file2 -d ~/dir1 -d ~/dir2
+
