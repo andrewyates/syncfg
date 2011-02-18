@@ -65,9 +65,52 @@ class ConfigPage(Resource):
         """ Reloads the config file and clears all cached values """
         self.config = pylibconfig.Config()
         self.config.readFile(self.CONFIG_FILE)
-        self.fqdn2name = {}
-        self.host2config = {}
-        self.host2dir = {}
+        self.fqdn2name = {}   # caches FQDN to host name mappings
+        self.host2config = {} # caches (host name, config name) to config files mappings
+        self.host2dir = {}    # caches host name to static directory list mappings
+
+        # map shared hosts to lists of their configs
+        shost2configs = {}
+        shared_hosts, normal_hosts = self.config_shared_hosts()
+        sh_set = set(shared_hosts)
+        for host in shared_hosts:
+            configs = []
+            shost2configs[host] = configs
+            for cfgkey in self.config.children(host+".configs"):
+                configs.append(self.config_parse_config_block(cfgkey))
+                
+        # add configs from inherited hosts to the cache
+        for host in normal_hosts: # check each host for an inherit statement
+            inherit, valid = self.config.value(host+".inherit")
+            if not valid:
+                continue
+            if not inherit in sh_set:
+                print >> sys.stderr, ("warning: host wants to %s inherit from %s, but %s is not a shared host" 
+                                      % (host, inherit, inherit))
+                continue
+            
+            # add all the shared host's configs to the current host
+            for name,sources in shost2configs[inherit]:
+                key = (host, name)
+                if key in self.host2config:
+                    print >> sys.stderr, "error: config %s for host %s inherited more than once" % (name,host)
+                    continue
+                self.host2config[key] = sources
+                
+    def config_shared_hosts(self):
+        """ Return a (shared_hosts, normal_hosts) tuple consisting of:
+            1) A list of hosts that may be inherited from. These are hosts with only a "configs" section. 
+            2) The other hosts. """
+        shared_hosts = []
+        normal_hosts = []
+        for host in self.config.children():
+            children = self.config.children(host)
+            if len(children) == 1 and children[0] == host+".configs":
+                shared_hosts.append(host)
+            else:
+                normal_hosts.append(host)
+
+        return (shared_hosts, normal_hosts)
 
     def get_dir_info(self, dir, host):
         """ Prepare a directory response """
@@ -134,6 +177,24 @@ class ConfigPage(Resource):
             out['new_file'], out['permissions'] = self.get_file(file, host)
         return out
 
+    def config_parse_config_block(self, cfgkey):
+        """ Parses a config file block and returns a (file name, file source list) pair """
+        files = []
+        namekey = cfgkey+ '.name'
+        srckey = cfgkey+ '.source'
+        name, nameValid = self.config.value(namekey)
+        if not nameValid:
+            print >> sys.stderr, "error: config block missing name key: ",namekey
+            return None
+        for srcfilekey in self.config.children(srckey):
+            filename, valid = self.config.value(srcfilekey)
+            if not valid:
+                print >> sys.stderr, "error: error in config block with key: ",srcfilekey
+                return None
+            files.append(filename)
+
+        return (name, files)
+
     def config_get_configs(self, file, host):
         mapkey = (host, file)
         if mapkey in self.host2config:
@@ -142,20 +203,9 @@ class ConfigPage(Resource):
         files = []
         key = host + '.configs'
         for cfgkey in self.config.children(key):
-            namekey = cfgkey+ '.name'
-            srckey = cfgkey+ '.source'
-            name, nameValid = self.config.value(namekey)
-            if not nameValid:
-                print >> sys.stderr, "error: config block missing name key: ",namekey
-                return None
-            if name != file:
-                continue
-            for srcfilekey in self.config.children(srckey):
-                filename, valid = self.config.value(srcfilekey)
-                if not valid:
-                    print >> sys.stderr, "error: error in config block with key: ",srcfilekey
-                    return None
-                files.append(filename)
+            (name, n_files) = self.config_parse_config_block(cfgkey)
+            if name == file:
+                files = n_files
 
         self.host2config[mapkey] = files # cache list of file's sources
         return files
@@ -199,7 +249,7 @@ class ConfigPage(Resource):
                     inStaticDir = True
                     break
 
-            if inStaticDir:    
+            if inStaticDir:
                 try:
                     filepath = os.path.join(self.DIR_DIR,file)
                     f = open(filepath)
