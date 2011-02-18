@@ -164,7 +164,7 @@ class ConfigPage(Resource):
                 self.add_file(files, hashes, k, v)
 
         if len(files) != len(hashes):
-            raise ValueError("file/hash count mismatch"
+            raise ValueError("file/hash count mismatch")
 
         host = self.config_fqdn_to_name(request.channel.transport.getPeerCertificate().get_subject().commonName)
 
@@ -208,6 +208,7 @@ class ConfigPage(Resource):
         return (name, files)
 
     def config_get_configs(self, file, host):
+        """Return the list of config sources making up config file file on the host host"""
         self.config_cache_configs(host)
 
         if file in self.host2config[host]:
@@ -289,6 +290,7 @@ class ConfigPage(Resource):
             raise ValueError("unknown key: %s" % key)
 
     def config_fqdn_to_name(self, host):
+        """ Return the host name for the FQDN host """
         if host in self.fqdn2name:
             return self.fqdn2name[host]
 
@@ -302,6 +304,7 @@ class ConfigPage(Resource):
             
 
     def config_fingerprint_valid(self, host, fingerprint):
+        """ Determine whether fingerprint is host's fingerprint and return true if so. """
         CA, valid = self.config.value("CA")
         CAfp, fpValid = self.config.value("CA_fingerprint")
         if not valid or not fpValid:
