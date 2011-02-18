@@ -1,6 +1,7 @@
 import hashlib
 import json
 import os
+import signal
 import stat
 import sys
 import time
@@ -337,6 +338,9 @@ class ConfigPage(Resource):
             print 'warning: denying connection from a cert that validates but does not exist in the config:', x509.get_subject(), x509.digest("sha512")
             return False
 
+    def handle_sigusr2(self, signum, frame):
+        self.config_reload()
+
 def prepare_server(basedir):
     """ Prepare a ConfigPage object with reasonable defaults and return a (port, Resource, ContextFactory) tuple """
     r = ConfigPage()
@@ -355,6 +359,8 @@ def prepare_server(basedir):
         r.verifyCallback
         )
     ctx.load_verify_locations(r.CA_PUBKEY)
+
+    signal.signal(signal.SIGUSR2, r.handle_sigusr2)
 
     return (7080, r, contextFactory)
 
