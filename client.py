@@ -93,6 +93,13 @@ class Retriever:
             print >> sys.stderr, "error mving new config over old one:", e
             return
 
+    def list(self, url):
+        """ Retrieve a list of configs and files """
+        req=self.get(url)
+        req.addCallback(self.done_list)
+        req.addErrback(self.error)
+        self.reqs += 1
+
     def add_file(self, url):
         """ Add a file to be retrieved """
         req=self.get(url)
@@ -136,6 +143,12 @@ class Retriever:
             self.process_response(resp)
         self.stop_if_done()
 
+    def done_list(self, result):
+        """ Receive list and print to stdout """
+        self.reqs -= 1
+        print result
+        self.stop_if_done()
+
     def error(self, error):
         """ Callback for errors encountered when communicating with the server """
         self.reqs -= 1
@@ -171,7 +184,7 @@ def file_cb(option, opt, value, parser):
 def dir_cb(option, opt, value, parser):
     dirargs.append(value)
 
-def main(infiles, indirs):
+def main(infiles, indirs, options):
     files = []
     csums = []
         
@@ -184,6 +197,9 @@ def main(infiles, indirs):
             csums.append(retriever.hash(infile))
         else:
             csums.append(0)
+
+    if options.listConfigs:
+        retriever.list("https://%s?list=true" % SERVER)
 
     # queue server requests for the requested directories
     for indir in indirs:
@@ -227,9 +243,11 @@ dirargs = []
 parser = OptionParser()
 parser.add_option("-f", "--file", action="callback", help="write report to FILE", callback=file_cb, type="string")
 parser.add_option("-d", "--dir", action="callback", help="write report to FILE", callback=dir_cb, type="string")
-
+parser.add_option("-l", "--list",
+                  action="store_true", dest="listConfigs", default=False,
+                  help="print a JSON-formatted list of this host's configs and directories to stdout")
 # use a safe default umask
 os.umask(077)
 
 (options, args) = parser.parse_args()
-main(fileargs, dirargs)
+main(fileargs, dirargs, options)
