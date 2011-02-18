@@ -226,8 +226,9 @@ def parse_config_file(filename):
             print >> sys.stderr, "error: config file missing '%s' statement" % stmt
             sys.exit(1)
         
-        if value[-1] != os.path.sep and value[-4:len(value)] == "_dir": # make sure all paths end with a /
+        if value[-1] != os.path.sep and stmt[-4:len(stmt)] == "_dir": # make sure all paths end with a /
             value += os.path.sep
+        
         config[stmt] = os.path.expanduser(value)
 
     return config
@@ -241,8 +242,8 @@ SERVER = config['server']
 fileargs = []
 dirargs = []
 parser = OptionParser()
-parser.add_option("-f", "--file", action="callback", help="write report to FILE", callback=file_cb, type="string")
-parser.add_option("-d", "--dir", action="callback", help="write report to FILE", callback=dir_cb, type="string")
+parser.add_option("-f", "--file", action="callback", help="Add file to be synced", callback=file_cb, type="string")
+parser.add_option("-d", "--dir", action="callback", help="Add directory to be synced", callback=dir_cb, type="string")
 parser.add_option("-l", "--list",
                   action="store_true", dest="listConfigs", default=False,
                   help="print a JSON-formatted list of this host's configs and directories to stdout")
