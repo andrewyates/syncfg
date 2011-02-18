@@ -36,7 +36,7 @@ class ConfigPage(Resource):
         dirs = self.config_get_dirs(host)
 
         out = []
-        cfgs = {"configs": self.host2config[host]}
+        cfgs = {"configs": self.host2config[host].keys()}
         dirs = {"dirs": dirs}
         out.extend([cfgs])
         out.extend([dirs])
