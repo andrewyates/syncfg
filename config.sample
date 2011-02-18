@@ -1,0 +1,79 @@
+# CA's FQDN
+CA = "ca.fqdn.yourdomain.org";
+# CA's SHA512 fingerprint
+CA_fingerprint = "DEAD:B33F:..."
+
+# to create a host that other hosts can inherit from, create a host with only a "configs" section
+sharedHost: 
+{
+     configs:
+     (
+      {
+           name = ".gitconfig";
+           source = "gitconfig";
+      }
+     );
+};
+
+# libconfig doesn't allow periods in the name of keys, so this name must be unique but cannot be the FQDN
+hostA:
+{
+     fqdn = "hostA.yourdomain.org";
+     # inherit the configs (only configs can be inherited!) from sharedHost
+     inherit = "sharedHost";
+     fingerprint = "DE:AD:BE:EF:12:..";
+ 
+     configs:
+     (
+       {
+          # files from "source" in the syncfg server's config directory will be appended in order to create "name"
+          name = ".zshrc";
+          source  = ["zshrc/common", "zshrc/preload-emacs", "zshrc/hostA"];
+       },
+
+       {
+         name = ".zprofile";
+         source = ["zprofile/common", "zprofile/hostA"];
+       },
+
+       {
+         name = ".emacs";
+         source = ["emacs/common", "emacs/preload"];
+       },
+
+    );
+ 
+};
+
+hostB;
+{
+     fqdn = "hostB.yourdomain.org";
+     inherit = "sharedHost";
+     fingerprint = "12:52:34:22"
+
+     configs:
+     (
+       {
+           name = ".zshrc";
+           source = ["zshrc/common", "zshrc/preload-emacs"];
+       },
+
+       {
+          name = ".zprofile";
+          source = ["zprofile/common", "zprofile/hostB"];
+       },
+
+       {
+          name = ".emacs";
+          source = ["emacs/common", "emacs/preload"];
+       },
+
+    );
+
+    # The contents of these directories on the syncfg server will be kept in sync with the same dirs on the host.
+    # Note that, unlike the above configs, this is static. That is, the "bin" directory contains exactly the same 
+    # files for all hosts. This is meant for use keeping scripts and libraries in sync. If there is a file in one
+    # of the directories you want customized, simply add it as a config file on each host and make sure it does not
+    # exist in the syncfg server's dir directory.
+    dirs = ["bin", ".emacs.d"];
+};
