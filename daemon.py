@@ -367,11 +367,15 @@ def prepare_server(basedir):
 engine = None
 
 def main():
-    if len(sys.argv) != 2:
-        print >> sys.stderr, "usage: %s <base directory>" % sys.argv[0]
+    if len(sys.argv) > 2:
+        print >> sys.stderr, "usage: %s [<base directory>]" % sys.argv[0]
         exit(3)
 
-    basedir = sys.argv[1]
+    if len(sys.argv> == 2):
+        basedir = sys.argv[1]
+    else:
+        basedir = os.path.expanduser("~/.config/syncfgd")
+
     if not os.path.isdir(basedir):
         print >> sys.stderr, "error: base directory '%s' does not exist" % basedir
         exit(4)
