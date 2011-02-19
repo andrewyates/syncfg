@@ -8,6 +8,7 @@ Requirements:
 - libconfig (on Ubuntu systems install the libconfig++8-dev package)
 - Python
 - python-libconfig (currently at http://github.com/azeey/python-libconfig)
+- Twisted (python-twisted-core and python-twisted-web on Ubuntu)
 
 Server:
 - Create a CA, sign a server key with it, sign client keys with it, and distribute the client keys to your clients.
