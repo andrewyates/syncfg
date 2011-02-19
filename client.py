@@ -100,12 +100,43 @@ class Retriever:
         req.addErrback(self.error)
         self.reqs += 1
 
+    def update(self, url):
+        """ Update all managed configs and files """
+        req=self.get(url)
+        req.addCallback(self.done_updatelist)
+        req.addErrback(self.error)
+        self.reqs += 1
+
+    def add_files(self, infiles):
+        """ Adds a list of files to be retrieved """
+        files = []
+        csums = []
+        # calculate hashes for any existing files
+        for infile in infiles:
+            files.append(infile)
+            
+            if os.path.exists(infile):
+                csums.append(self.hash(infile))
+            else:
+                csums.append(0)
+
+        # queue server requests for the requested files
+        for file,csum in zip(files,csums):
+            sanefile = file.replace(HOMEDIR,"")
+            self.add_file("https://%s?file=%s&hash=%s" % (SERVER, sanefile, csum))
+
+
     def add_file(self, url):
         """ Add a file to be retrieved """
         req=self.get(url)
         req.addCallback(self.done_file)
         req.addErrback(self.error)
         self.reqs += 1
+
+    def add_dirs(self, indirs):
+        """ Add a list of directories to be retrieved """
+        for indir in indirs:
+            self.add_dir("https://%s?dir=%s" % (SERVER, indir))
 
     def add_dir(self, url):
         """ Add a directory to be retrieved """
@@ -149,6 +180,27 @@ class Retriever:
         print result
         self.stop_if_done()
 
+    def done_updatelist(self, result):
+        """ Receive list and attempt to update each one """
+        self.reqs -= 1
+
+        files = []
+        dirs = []
+
+        responses = json.loads(result)
+        for resp in responses:
+            if 'configs' in resp:
+                for config in resp["configs"]:
+                    files.append(os.path.join(HOMEDIR,str(config)))
+            elif 'dirs' in resp:
+                for dir in resp["dirs"]:
+                    dirs.append(os.path.join(HOMEDIR,str(dir)))
+
+        self.add_dirs(dirs)
+        self.add_files(files)
+
+        self.stop_if_done()
+
     def error(self, error):
         """ Callback for errors encountered when communicating with the server """
         self.reqs -= 1
@@ -185,32 +237,21 @@ def dir_cb(option, opt, value, parser):
     dirargs.append(value)
 
 def main(infiles, indirs, options):
-    files = []
-    csums = []
-        
     retriever = Retriever()
-
-    # store requested files and their hashes
-    for infile in infiles:
-        files.append(infile)
-
-        if os.path.exists(infile):
-            csums.append(retriever.hash(infile))
-        else:
-            csums.append(0)
 
     # list this host's configs and dirs?
     if options.listConfigs:
         retriever.list("https://%s?list=true" % SERVER)
 
-    # queue server requests for the requested directories
-    for indir in indirs:
-        retriever.add_dir("https://%s?dir=%s" % (SERVER, indir))
-
-    # queue server requests for the requested files
-    for file,csum in zip(files,csums):
-        sanefile = file.replace(HOMEDIR,"")
-        retriever.add_file("https://%s?file=%s&hash=%s" % (SERVER, sanefile, csum))
+    # update all configs?
+    if options.updateAll:
+        retriever.update("https://%s?list=true" % SERVER)
+    else:
+        # queue server requests for the requested directories
+        retriever.add_dirs(indirs)
+        
+        # queue server requests for the requested files
+        retriever.add_files(infiles)
     
     # fetch requested files and dirs
     reactor.run()
@@ -250,6 +291,9 @@ parser.add_option("-d", "--dir", action="callback", help="directory to be synced
 parser.add_option("-l", "--list",
                   action="store_true", dest="listConfigs", default=False,
                   help="print a JSON-formatted list of this host's configs and directories")
+parser.add_option("-u", "--update-all",
+                  action="store_true", dest="updateAll", default=False,
+                  help="update all managed configs and directories")
 
 # use a safe default umask
 os.umask(077)
