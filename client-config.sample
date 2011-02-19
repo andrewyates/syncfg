@@ -14,7 +14,7 @@ home_dir = "~";
 server = "example.org:7080";
 
 # client's public and private key
-public_key = "~/config/syncfg/keys/client.crt";
+public_key = "~/.config/syncfg/keys/client.crt";
 private_key = "~/.config/syncfg/keys/client.key";
 
 # CA's public key
