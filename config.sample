@@ -21,6 +21,7 @@ sharedHost:
 # so the host name must be unique but cannot be the FQDN
 hostA:
 {
+     # this must be exactly the same as the commonName in the host's certificate
      fqdn = "hostA.yourdomain.org";
      # inherit the configs (only configs can be inherited!) from sharedHost
      inherit = "sharedHost";
@@ -48,7 +49,7 @@ hostA:
  
 };
 
-hostB;
+hostB:
 {
      fqdn = "hostB.yourdomain.org";
      inherit = "sharedHost";
