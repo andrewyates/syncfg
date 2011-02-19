@@ -12,7 +12,7 @@ As you may imagine, this requires that one chooses logical config parts. Static 
 
 Example
 =======
-For example, hostA's .emacs might be made of the sources "emacs/common", "emacs/python", and "emacs/haskell". On hostB, which does not have a Haskell development environment but does have a Java dev environment, "emacs/haskell" is replaced with "emacs/java". Making a change to "emacs/python" would update the .emacs file on both hostA and hostB.
+hostA's .emacs might be made of the sources "emacs/common", "emacs/python", and "emacs/haskell". On hostB, which does not have a Haskell development environment but does have a Java dev environment, "emacs/haskell" is replaced with "emacs/java". Making a change to "emacs/python" would update the .emacs file on both hostA and hostB.
 
 Requirements
 ============
