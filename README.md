@@ -35,6 +35,7 @@ Server
   If you want to store the SSL certs to an alternate location, edit service.tac.
 - Rename config.sample to config, copy to your base directory (~/.config/syncfgd/ by default), and edit it
 - Create your config file parts in the configs directory in your base directory (~/.config/syncfgd/configs by default)
+
   By convention config parts are placed in a directory named after the config file they generate.
   For example, the config parts used to generated .zshrc might be "configs/zshrc/common" and "configs/zshrc/emacsclient"
 - Populate the dirs directory with any required static files (~/.config/syncfgd/dirs)
