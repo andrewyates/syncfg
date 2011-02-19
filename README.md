@@ -2,9 +2,9 @@ syncfg
 ======
 syncfg is a system for synchronizing config files and static directories.
 
-Config files are comprised of config "sources" (or "parts") that are appended to create the final config file. The list of config sources comprising each config file can be different for each host.
+Config files are comprised of config "sources" (or "parts") that are appended in order to create the final config file. The list of config sources comprising each config file can be different for each host.
 
-syncfg provides two advantages over traditional configuration management:
+syncfg provides two advantages over traditional configuration management
 - configs are only edited once and in one place (the syncfgd server), and may easily be managed with git there
 - changes to a config are propagated to all clients with no manual intervention, even if the final config differs between clients
 
