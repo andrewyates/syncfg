@@ -48,10 +48,16 @@ class Retriever:
     def process_response(self, resp):
         """ Process the server's response to a file request, updating the current file if it is oudated """
 
+
+        if not ('filename' in resp and 'status' in resp):
+            print >> sys.stderr, "error: received malformed response from server:",resp
+            exit(2)
+
         if resp['status'] != "outdated":
+            if VERBOSE: print "%s: %s" % (resp['filename'], resp['status'])
             return
 
-        if not ('filename' in resp and 'new_file' in resp and 'latest_hash' in resp):
+        if not ('new_file' in resp and 'latest_hash' in resp):
             print >> sys.stderr, "error: received malformed response from server:",resp
             exit(2)
 
@@ -89,6 +95,7 @@ class Retriever:
         try:
             os.chmod(stagefile, int(resp["permissions"]))
             shutil.move(stagefile, newfile)
+            if VERBOSE: print "%s: updated" % resp['filename']
         except IOError, e:
             print >> sys.stderr, "error mving new config over old one:", e
             return
@@ -294,9 +301,14 @@ parser.add_option("-l", "--list",
 parser.add_option("-u", "--update-all",
                   action="store_true", dest="updateAll", default=False,
                   help="update all managed configs and directories")
+parser.add_option("-v", "--verbose",
+                  action="store_true", dest="verbose", default=False,
+                  help="print information about configs and directories as they are updated")
+
 
 # use a safe default umask
 os.umask(077)
 
 (options, args) = parser.parse_args()
+VERBOSE = options.verbose
 main(fileargs, dirargs, options)
