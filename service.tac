@@ -13,8 +13,8 @@ import daemon
 
 #################################### CONFIG ####################################
 # create a configPage with BASE_DIR set to "/home/andrew/tmp/syncfg"
-basedir = "~/.config/syncfgd"
-port, configPage, contextFactory = daemon.prepare_server(os.path.expanduser(basedir))
+basedir = os.path.expanduser("~/.config/syncfgd")
+port, configPage, contextFactory = daemon.prepare_server(basedir)
 
 # with these defaults:
 #configPage.PRIVKEY = os.path.join(configPage.BASE_DIR,'keys/server.key')
