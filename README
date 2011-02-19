@@ -20,8 +20,10 @@ Server:
 - Create your config file parts in the configs directory in your base directory (~/.config/syncfgd/configs by default)
 - Populate the dirs directory with any required static files (~/.config/syncfgd/dirs)
 - Launch the daemon with twistd -ny service.tac or use the start-server.sh and stop-server.sh scripts
+- To reoad the config file, send SIGUSR2 to the daemon's process
 
 Client:
 - On each client, copy client-config.sample to ~/.config/syncfg/config and edit
-- To update configs on a client, run: python client.py -f ~/.a_file_to_update -f ~/file2 -d ~/dir1 -d ~/dir2
+- To update configs on a client, run: ./syncfg -f ~/.a_file_to_update -f ~/file2 -d ~/dir1 -d ~/dir2
+- To view all managed configs and dirs for a host, run: ./syncfg -l
 
