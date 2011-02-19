@@ -188,11 +188,12 @@ def main(infiles, indirs, options):
     files = []
     csums = []
         
+    retriever = Retriever()
+
     # store requested files and their hashes
     for infile in infiles:
         files.append(infile)
 
-        retriever = Retriever()
         if os.path.exists(infile):
             csums.append(retriever.hash(infile))
         else:
