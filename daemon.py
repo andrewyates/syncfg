@@ -371,7 +371,7 @@ def main():
         print >> sys.stderr, "usage: %s [<base directory>]" % sys.argv[0]
         exit(3)
 
-    if len(sys.argv >= 2):
+    if len(sys.argv) >= 2:
         basedir = sys.argv[1]
     else:
         basedir = os.path.expanduser("~/.config/syncfgd")
