@@ -6,9 +6,9 @@ import stat
 import sys
 from optparse import OptionParser
 
+import pylibconfig
 from OpenSSL.SSL import Context, VERIFY_PEER, VERIFY_FAIL_IF_NO_PEER_CERT
 from OpenSSL.crypto import load_certificate, FILETYPE_PEM
-import pylibconfig
 from twisted.python.urlpath import URLPath
 from twisted.internet.ssl import ContextFactory
 from twisted.internet.error import ConnectionRefusedError
@@ -199,6 +199,7 @@ def main(infiles, indirs, options):
         else:
             csums.append(0)
 
+    # list this host's configs and dirs?
     if options.listConfigs:
         retriever.list("https://%s?list=true" % SERVER)
 
@@ -221,6 +222,7 @@ def parse_config_file(filename):
     cfg = pylibconfig.Config()
     cfg.readFile(filename)
 
+    # valid config statements / keys
     for stmt in ['staging_dir', 'backup_dir', 'home_dir', 'server', 'private_key', 'public_key', 'ca_key']:
         value, valid = cfg.value(stmt)
         if not valid:
@@ -243,11 +245,12 @@ SERVER = config['server']
 fileargs = []
 dirargs = []
 parser = OptionParser()
-parser.add_option("-f", "--file", action="callback", help="Add file to be synced", callback=file_cb, type="string")
-parser.add_option("-d", "--dir", action="callback", help="Add directory to be synced", callback=dir_cb, type="string")
+parser.add_option("-f", "--file", action="callback", help="file to be synced", callback=file_cb, type="string")
+parser.add_option("-d", "--dir", action="callback", help="directory to be synced", callback=dir_cb, type="string")
 parser.add_option("-l", "--list",
                   action="store_true", dest="listConfigs", default=False,
-                  help="print a JSON-formatted list of this host's configs and directories to stdout")
+                  help="print a JSON-formatted list of this host's configs and directories")
+
 # use a safe default umask
 os.umask(077)
 
