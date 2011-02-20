@@ -6,6 +6,9 @@ staging_dir = "~/.config/syncfg/stage/";
 # directory to backup configs in when they are replaced
 backup_dir = "~/.config/syncfg/backup";
 
+# directory to store pre-update and post-update hooks in
+hook_dir = "~/.config/syncfg/hooks";
+
 # final destination directory for config files
 # this should normally be "~"
 home_dir = "~";

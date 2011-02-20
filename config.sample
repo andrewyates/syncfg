@@ -33,6 +33,14 @@ hostA:
           # files from "source" in the syncfg server's config directory will be appended in order to create "name"
           name = ".zshrc";
           source  = ["zshrc/common", "zshrc/preload-emacs", "zshrc/hostA"];
+          # hook scripts should be placed in a hooks directory in the server's basedir
+          # the hooks will be sent to the client along with their config
+          hook-client-pre-update-script = "pre-test";
+          hook-client-post-update-script = "post-test";
+
+          # alternatively, commands to run as hooks can be placed inline using -command instead of -script
+          #hook-client-pre-update-script = "echo zshrc pre hook";
+          #hook-client-post-update-script = "echo zshrc post hook";
        },
 
        {
