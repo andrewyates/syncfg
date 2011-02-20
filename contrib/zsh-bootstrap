@@ -1,0 +1,41 @@
+# this zshrc updates the user's real zshrc and then loads it
+# it is intended to be used to check for ~/.zshrc updates on login
+
+# location of your real zshrc (this loader must be your ~/.zshrc so that it's run on login)
+ZSHRC="$HOME/.zshrc_full"
+
+# location of syncfg script
+SYNCFG="$HOME/.local/syncfg/syncfg"
+
+# file to store the RPROMPT to display in
+RPROMPT_FILE="$HOME/.rprompt"
+
+# file to store the original RPROMPT in
+RPROMPT_BACKUP="$HOME/.rprompt_backup"
+
+# location of background updater script
+# this script will be run after $ZSHRC is updated. it should edit RPROMPT_FILE to reflect its status 
+# as files are updated, send SIGUSR1 to all zsh processes when the file is modified,
+# and copy RPROMPT_BACKUP over RPROMPT_FILE before exiting
+UPDATER="$HOME/.config/syncfg/updater"
+
+$SYNCFG -v -f $ZSHRC | grep -v ": ok$"
+
+# if exit status is != 0, print error
+if [[ $? -ne 0 ]]; then
+   echo warning: syncfg exited with a nonzero exit status
+fi
+
+touch $RPROMPT_FILE
+
+TRAPUSR1() {
+  [[ -o zle ]] && zle -I  # Invalidate zle display
+  new=`cat $RPROMPT_FILE`
+  export RPROMPT=$new
+}
+
+source $ZSHRC
+
+echo -n $RPROMPT > $RPROMPT_BACKUP
+
+$UPDATER "$SYNCFG" "$RPROMPT_FILE" "$RPROMPT_BACKUP" & disown

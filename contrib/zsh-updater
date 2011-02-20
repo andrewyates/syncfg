@@ -1,0 +1,31 @@
+#!/usr/bin/zsh
+
+# this script will be run after $ZSHRC is updated. it should edit RPROMPT_FILE to reflect its status 
+# as files are updated, send SIGUSR1 to all zsh processes when the file is modified,
+# and copy RPROMPT_BACKUP over RPROMPT_FILE before exiting
+
+if [[ $# -ne 3 ]]; then
+   echo "usage: `basename $0` <syncfg client> <rprompt file> <rprompt backup>"
+   exit 1
+fi
+
+SYNCFG=$1
+RPROMPT_FILE=$2
+RPROMPT_BACKUP=$3
+
+if [[ ! -x $SYNCFG ]]; then
+    echo "`basename $0`: error: $SYNCFG is missing or not executable"
+    exit 2
+fi
+
+echo -n "[updating]" > $RPROMPT_FILE
+killall -USR1 zsh
+
+$SYNCFG -u
+
+if [[ -e $RPROMPT_BACKUP ]]; then
+    cp -f $RPROMPT_BACKUP $RPROMPT_FILE
+else
+    echo -n > $RPROMPT_FILE
+fi
+killall -USR1 zsh
