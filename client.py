@@ -4,6 +4,7 @@ import json
 import os
 import shutil
 import stat
+import subprocess
 import sys
 from optparse import OptionParser
 
@@ -67,6 +68,30 @@ class Retriever:
         if not os.path.exists(stagedir):
             os.makedirs(stagedir)
 
+        if not os.path.exists(HOOK_DIR):
+            os.makedirs(HOOK_DIR)
+
+        sanefn = resp['filename'].replace("/","-")
+            
+        # write any hooks the file may have
+        for hook in ['prehook', 'posthook']:
+            if hook in resp:
+                try:
+                    name = hook+"_"+sanefn
+                    hookfile = os.path.join(HOOK_DIR, name)
+                    f = open(hookfile, 'w')
+                    f.write(base64.b64decode(resp[hook].encode("utf-8")))
+                    f.close()
+                    # chmod hook 750 (int 488)
+                    os.chmod(hookfile, 488)
+                except IOError, e:
+                    print >> sys.stderr, "error writing hook file:", e
+                    return
+
+        # run prehook if it exists
+        if 'prehook' in resp:
+            subprocess.call([os.path.join(HOOK_DIR, "prehook_"+sanefn)])
+
         try:
             f = open(stagefile ,'w')
             f.write(base64.b64decode(resp['new_file'].encode("utf-8")))
@@ -100,6 +125,11 @@ class Retriever:
         except IOError, e:
             print >> sys.stderr, "error mving new config over old one:", e
             return
+
+        # run posthook if it exists
+        if 'posthook' in resp:
+            subprocess.call([os.path.join(HOOK_DIR, "posthook_"+sanefn)])
+
 
     def list(self, url):
         """ Retrieve a list of configs and files """
@@ -272,7 +302,8 @@ def parse_config_file(filename):
     cfg.readFile(filename)
 
     # valid config statements / keys
-    for stmt in ['staging_dir', 'backup_dir', 'home_dir', 'server', 'private_key', 'public_key', 'ca_key']:
+    for stmt in ['staging_dir', 'backup_dir', 'home_dir', 'hook_dir', 
+                 'server', 'private_key', 'public_key', 'ca_key']:
         value, valid = cfg.value(stmt)
         if not valid:
             print >> sys.stderr, "error: config file missing '%s' statement" % stmt
@@ -289,6 +320,7 @@ config = parse_config_file(os.path.expanduser("~/.config/syncfg/config"))
 STAGING_DIR = config['staging_dir']
 BACKUP_DIR = config['backup_dir']
 HOMEDIR = config['home_dir']
+HOOK_DIR = config['hook_dir']
 SERVER = config['server']
 
 fileargs = []

@@ -107,14 +107,14 @@ class ConfigPage(Resource):
                 continue
             
             # add all the shared host's configs to the current host
-            for name,sources in shost2configs[inherit]:
+            for name,sources,pre,post in shost2configs[inherit]:
                 key = (host, name)
                 if host in self.host2config and name in self.host2config[host]:
                     print >> sys.stderr, "error: config %s for host %s inherited more than once" % (name,host)
                     continue
                 if host not in self.host2config:
                     self.host2config[host] = {}
-                self.host2config[host][name] = sources
+                self.host2config[host][name] = (sources,pre,post)
                 
     def config_shared_hosts(self):
         """ Return a (shared_hosts, normal_hosts) tuple consisting of:
@@ -190,11 +190,16 @@ class ConfigPage(Resource):
             out['status'] = "outdated"
             contents, perms = self.get_file(file, host)
             out['new_file'], out['permissions'] = base64.b64encode(contents), perms
+            sources, pre, post = self.host2config[host][file]
+            out['prehook'] = base64.b64encode(pre)
+            out['posthook'] = base64.b64encode(post)
+            print out
         return out
 
     def config_parse_config_block(self, cfgkey):
-        """ Parses a config file block and returns a (file name, file source list) pair """
+        """ Parses a config file block and returns a (file name, file source list, pre hook, post hook) tuple """
         files = []
+        prehook, posthook = None, None
         namekey = cfgkey+ '.name'
         srckey = cfgkey+ '.source'
         name, nameValid = self.config.value(namekey)
@@ -208,14 +213,44 @@ class ConfigPage(Resource):
                 return None
             files.append(filename)
 
-        return (name, files)
+        prehook, preValid = self.config.value(cfgkey+'.hook-client-pre-update-script')
+        posthook, postValid = self.config.value(cfgkey+'.hook-client-post-update-script')
+        # check for -command if we didn't find script hooks or if we did read the scripts
+        try: 
+            if not preValid:
+                prehook, preValid = self.config.value(cfgkey+'.hook-client-pre-update-command')
+                if preValid:
+                    prehook = "#!/bin/bash\n" + prehook
+            else:
+                f = open(os.path.join(self.HOOK_DIR,prehook))
+                prehook = f.read()
+                f.close()
+
+            if not postValid:
+                posthook, postValid = self.config.value(cfgkey+'.hook-client-post-update-command')
+                if postValid:
+                    posthook = "#!/bin/bash\n" + posthook
+            else:
+                f = open(os.path.join(self.HOOK_DIR,posthook))
+                posthook = f.read()
+                f.close()
+        except IOError, e:
+            print >> sys.stderr, "IOError opening hook file:",e
+
+        if not preValid:
+            prehook = None
+        if not postValid:
+            posthook = None
+
+        return (name, files, prehook, posthook)
 
     def config_get_configs(self, file, host):
         """Return the list of config sources making up config file file on the host host"""
         self.config_cache_configs(host)
 
         if file in self.host2config[host]:
-            return self.host2config[host][file]
+            config, pre, post = self.host2config[host][file]
+            return config
         else:
             return []
 
@@ -226,10 +261,10 @@ class ConfigPage(Resource):
 
         key = host + '.configs'
         for cfgkey in self.config.children(key):
-            (name, files) = self.config_parse_config_block(cfgkey)
+            (name, files, pre, post) = self.config_parse_config_block(cfgkey)
             if not host in self.host2config:
                 self.host2config[host] = {}
-            self.host2config[host][name] = files # cache list of file's sources
+            self.host2config[host][name] = (files, pre, post) # cache list of file's sources and hooks
         self.cached_host_configs.add(host)
 
     def get_file(self, file, host):
@@ -349,6 +384,7 @@ def prepare_server(basedir):
     r.BASE_DIR = basedir + os.path.sep
     r.CONFIG_DIR = os.path.join(r.BASE_DIR, "configs") + os.path.sep
     r.DIR_DIR = os.path.join(r.BASE_DIR, "dirs") + os.path.sep
+    r.HOOK_DIR = os.path.join(r.BASE_DIR, "hooks") + os.path.sep
     r.PRIVKEY = os.path.join(r.BASE_DIR,'keys/server.key')
     r.PUBKEY = os.path.join(r.BASE_DIR, 'keys/server.crt')
     r.CA_PUBKEY = os.path.join(r.BASE_DIR,"keys/ca.crt")
