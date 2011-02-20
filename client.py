@@ -1,3 +1,4 @@
+import base64
 import hashlib
 import json
 import os
@@ -68,7 +69,7 @@ class Retriever:
 
         try:
             f = open(stagefile ,'w')
-            f.write(resp['new_file'].encode("utf-8"))
+            f.write(base64.b64decode(resp['new_file'].encode("utf-8")))
             f.close()
         except IOError, e:
             print >> sys.stderr, "error writing staging file:", e

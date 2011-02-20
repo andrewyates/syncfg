@@ -1,3 +1,4 @@
+import base64
 import hashlib
 import json
 import os
@@ -187,7 +188,8 @@ class ConfigPage(Resource):
             out['status'] = "missing"
         else:
             out['status'] = "outdated"
-            out['new_file'], out['permissions'] = self.get_file(file, host)
+            contents, perms = self.get_file(file, host)
+            out['new_file'], out['permissions'] = base64.b64encode(contents), perms
         return out
 
     def config_parse_config_block(self, cfgkey):
