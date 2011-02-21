@@ -1,6 +1,6 @@
 syncfg
 ======
-syncfg is a system for synchronizing config files and static directories.
+syncfg is a system for synchronizing config files and supporting directories.
 
 Config files are comprised of config "sources" (or "parts") that are appended in order to create the final config file. The list of config sources comprising each config file can be different for each host.
 
@@ -49,3 +49,7 @@ Client
 - To update specific resources on a client, run: ./syncfg -f ~/.a_file_to_update -f ~/file2 -d ~/dir1 -d ~/dir2
 - To view all managed configs and dirs for a host, run: ./syncfg -l
 - Use --verbose or the -v flag to see information on each file and directory that is processed
+
+License
+=======
+syncfg is available under the GNU General Public License v2, or (at your option) any later version.
