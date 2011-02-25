@@ -217,7 +217,7 @@ class ConfigPage(Resource):
     def config_parse_config_block(self, cfgkey):
         """ Parses a config file block and returns a (file name, file source list, pre hook, post hook) tuple """
         files = []
-        prehook, posthook = None, None
+        prehook, posthook = "", ""
         namekey = cfgkey+ '.name'
         srckey = cfgkey+ '.source'
         name, nameValid = self.config.value(namekey)
