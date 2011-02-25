@@ -256,9 +256,9 @@ class ConfigPage(Resource):
             print >> sys.stderr, "IOError opening hook file:",e
 
         if not preValid:
-            prehook = None
+            prehook = ""
         if not postValid:
-            posthook = None
+            posthook = ""
 
         return (name, files, prehook, posthook)
 
