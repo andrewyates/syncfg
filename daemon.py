@@ -78,7 +78,8 @@ class ConfigPage(Resource):
         return json.dumps(out, sort_keys=False, indent=4)
 
     def config_get_dirs(self, host):
-        if host in self.host2dir:
+        """ Returns a list of directories for host from the config file"""
+        if host in self.host2dir: 
             return self.host2dir[host]
 
         dirs = []
@@ -232,7 +233,7 @@ class ConfigPage(Resource):
 
         prehook, preValid = self.config.value(cfgkey+'.hook-client-pre-update-script')
         posthook, postValid = self.config.value(cfgkey+'.hook-client-post-update-script')
-        # check for -command if we didn't find script hooks or if we did read the scripts
+        # check for -command if we didn't find script hooks. if we did read the scripts
         try: 
             if not preValid:
                 prehook, preValid = self.config.value(cfgkey+'.hook-client-pre-update-command')
@@ -393,6 +394,7 @@ class ConfigPage(Resource):
             return False
 
     def handle_sigusr2(self, signum, frame):
+        """ Reload config on SIGUSR2 """
         self.config_reload()
 
 def prepare_server(basedir):
@@ -426,7 +428,7 @@ def main():
         print >> sys.stderr, "usage: %s [<base directory>]" % sys.argv[0]
         exit(3)
 
-    if len(sys.argv) >= 2:
+    if len(sys.argv) == 2:
         basedir = sys.argv[1]
     else:
         basedir = os.path.expanduser("~/.config/syncfgd")
