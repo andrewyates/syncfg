@@ -92,7 +92,7 @@ class Retriever:
             
         # write any hooks the file may have
         for hook in ['prehook', 'posthook']:
-            if hook in resp:
+            if hook in resp and resp['prehook'] != "":
                 try:
                     name = hook+"_"+sanefn
                     hookfile = os.path.join(HOOK_DIR, name)
@@ -106,7 +106,7 @@ class Retriever:
                     return
 
         # run prehook if it exists
-        if 'prehook' in resp:
+        if 'prehook' in resp and resp['prehook'] != "":
             subprocess.call([os.path.join(HOOK_DIR, "prehook_"+sanefn)])
 
         try:
@@ -144,7 +144,7 @@ class Retriever:
             return
 
         # run posthook if it exists
-        if 'posthook' in resp:
+        if 'posthook' in resp and resp['posthook'] != "":
             subprocess.call([os.path.join(HOOK_DIR, "posthook_"+sanefn)])
 
 
