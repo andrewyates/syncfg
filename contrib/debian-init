@@ -47,16 +47,16 @@ fi
 
 case "$1" in
 start)	log_daemon_msg "Starting syncfg daemon" "syncfgd"
-        start-stop-daemon --start --quiet -b -c ${USER}:${GROUP} -m --pidfile $PIDFILE --name syncfgd --startas $DAEMON -- $BASEDIR
+        start-stop-daemon --start --quiet -b -c ${USER}:${GROUP} -m --pidfile $PIDFILE --name python --startas $DAEMON -- $BASEDIR
         log_end_msg $?
 	;;
 stop)	log_daemon_msg "Stopping syncfg daemon" "syncfgd"
-        start-stop-daemon --stop --quiet --pidfile $PIDFILE --name syncfgd
+        start-stop-daemon --stop --quiet --pidfile $PIDFILE --name python
         log_end_msg $?
         ;;
 restart) log_daemon_msg "Restarting syncfg daemon" "syncfgd" 
-        start-stop-daemon --stop --retry 5 --quiet -c ${USER}:${GROUP} --pidfile $PIDFILE --name syncfgd
-        start-stop-daemon --start --quiet -b -c ${USER}:${GROUP} -m --pidfile $PIDFILE --name syncfgd --startas $DAEMON -- $BASEDIR
+        start-stop-daemon --stop --retry 5 --quiet -c ${USER}:${GROUP} --pidfile $PIDFILE --name python
+        start-stop-daemon --start --quiet -b -c ${USER}:${GROUP} -m --pidfile $PIDFILE --name python --startas $DAEMON -- $BASEDIR
         log_end_msg $?
         ;;
 *)	log_action_msg "Usage: /etc/init.d/syncfgd {start|stop|restart}"
