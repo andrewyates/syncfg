@@ -134,7 +134,7 @@ class ConfigPage(Resource):
         syslogValue, syslogValid = self.config.value("syslog")
         if syslogValid and syslogValue.lower() == "true":
             self.syslog = True
-            syslog.openlog("syncfg", syslog.LOG_PID, syslog.LOG_DAEMON)
+            syslog.openlog("syncfgd", syslog.LOG_PID, syslog.LOG_DAEMON)
         else:
             self.syslog = False
 
