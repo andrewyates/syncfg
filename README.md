@@ -15,7 +15,7 @@ Example
 =======
 hostA's .emacs might be made of the sources "emacs/common", "emacs/python", and "emacs/haskell". On hostB, which does not have a Haskell development environment but does have a Java dev environment, "emacs/haskell" is replaced with "emacs/java". Making a change to "emacs/python" would update the .emacs file on both hostA and hostB.
 
-elisp can be pushed to both hostA and hostB by configuring a ".emacs.d/lisp" static directory.
+Supporting elisp can be pushed to both hostA and hostB by configuring a ".emacs.d/lisp" static directory.
 
 Requirements
 ============
