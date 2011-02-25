@@ -1,0 +1,2 @@
+*.* /var/log/syncfgd.log
+:programname, isequal, "syncfgd"  ~ 
