@@ -333,13 +333,6 @@ def parse_config_file(filename):
 
     return config
 
-config = parse_config_file(os.path.expanduser("~/.config/syncfg/config"))
-STAGING_DIR = config['staging_dir']
-BACKUP_DIR = config['backup_dir']
-HOMEDIR = config['home_dir']
-HOOK_DIR = config['hook_dir']
-SERVER = config['server']
-
 fileargs = []
 dirargs = []
 parser = OptionParser()
@@ -354,11 +347,22 @@ parser.add_option("-u", "--update-all",
 parser.add_option("-v", "--verbose",
                   action="store_true", dest="verbose", default=False,
                   help="print information about configs and directories as they are updated")
-
+parser.add_option("-c", "--config",
+                  action="store", dest="config_file", default="~/.config/syncfg/config",
+                  help="config file location (default: ~/.config/syncfg/config)")
 
 # use a safe default umask
 os.umask(077)
 
 (options, args) = parser.parse_args()
+
 VERBOSE = options.verbose
+config_file = "~/.config/syncfg/config"
+config = parse_config_file(os.path.expanduser(options.config_file))
+STAGING_DIR = config['staging_dir']
+BACKUP_DIR = config['backup_dir']
+HOMEDIR = config['home_dir']
+HOOK_DIR = config['hook_dir']
+SERVER = config['server']
+
 main(fileargs, dirargs, options)
