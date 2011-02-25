@@ -213,10 +213,15 @@ class ConfigPage(Resource):
             out['status'] = "outdated"
             contents, perms = self.get_file(file, host)
             out['new_file'], out['permissions'] = base64.b64encode(contents), perms
-            sources, pre, post = self.host2config[host][file]
+            if file in self.host2config[host]:
+                sources, pre, post = self.host2config[host][file]
+            elif file in self.host2dirfiles[host]:
+                sources, pre, post = [file], "", ""
+            else:
+                sources, pre, post = ["UNKNOWN", "", ""]
+                print >> sys.stderr, "warning: could not find requested file: %s" % file
             out['prehook'] = base64.b64encode(pre)
             out['posthook'] = base64.b64encode(post)
-            print out
         return out
 
     def config_parse_config_block(self, cfgkey):
