@@ -23,6 +23,12 @@ killall -USR1 zsh
 
 $SYNCFG -u
 
+if [[ $? -ne 0 ]]; then
+    echo -n "[failed]" > $RPROMPT_FILE
+    killall -USR1 zsh
+    sleep 30s # give the user time to see the failure notification before removing it
+fi
+
 if [[ -e $RPROMPT_BACKUP ]]; then
     cp -f $RPROMPT_BACKUP $RPROMPT_FILE
 else

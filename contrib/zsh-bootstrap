@@ -19,12 +19,17 @@ RPROMPT_BACKUP="$HOME/.rprompt_backup"
 # and copy RPROMPT_BACKUP over RPROMPT_FILE before exiting
 UPDATER="$HOME/.config/syncfg/updater"
 
-$SYNCFG -v -f $ZSHRC | grep -v ": ok$"
+# temporary update log. written once every time this script is run
+TMPLOG="$HOME/.config/syncfg/.updatelog"
+
+$SYNCFG -v -f $ZSHRC > $TMPLOG
 
 # if exit status is != 0, print error
 if [[ $? -ne 0 ]]; then
    echo warning: syncfg exited with a nonzero exit status
 fi
+
+grep -v ": ok$" $TMPLOG
 
 touch $RPROMPT_FILE
 
