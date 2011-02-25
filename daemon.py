@@ -22,9 +22,12 @@ import os
 import signal
 import stat
 import sys
+import syslog
 import time
 
 from OpenSSL import SSL
+from syslog import LOG_ERR, LOG_WARNING, LOG_INFO
+
 import pylibconfig 
 from twisted.internet import reactor, ssl
 from twisted.web.resource import Resource
@@ -36,7 +39,7 @@ class ConfigPage(Resource):
 
     def render_GET(self, request):
         """ Determine whether the request was for a file or directory and handle it. Called on every request. """
-        print "request:",request
+        self.log("request: %s" % request, LOG_INFO)
         if "dir" in request.args: # dir request?
             return self.respond_dir(request)
         elif "file" in request.args: # config request?
@@ -77,6 +80,23 @@ class ConfigPage(Resource):
 
         return json.dumps(out, sort_keys=False, indent=4)
 
+    def log(self, msg, priority):
+        if self.syslog and (self.log_info or priority != LOG_INFO):
+            syslog.syslog(priority, msg)
+        else:
+            if priority == LOG_ERR:
+                prefix = "error: "
+                out = sys.stderr
+            elif priority == LOG_WARNING:
+                prefix = "warning: "
+                out = sys.stderr
+            elif priority == LOG_INFO:
+                prefix = "info: "
+                out = sys.stdout
+
+            if self.log_info or priority != LOG_INFO:
+                print >> out, prefix + msg
+
     def config_get_dirs(self, host):
         """ Returns a list of directories for host from the config file"""
         if host in self.host2dir: 
@@ -109,6 +129,22 @@ class ConfigPage(Resource):
         self.cached_host_configs = set([])
         self.cached_host_dirfiles = set([])
 
+        
+        # log to syslog?
+        syslogValue, syslogValid = self.config.value("syslog")
+        if syslogValid and syslogValue.lower() == "true":
+            self.syslog = True
+            syslog.openlog("syncfg", syslog.LOG_PID, syslog.LOG_DAEMON)
+        else:
+            self.syslog = False
+
+        # log info?
+        info, infoValid = self.config.value("log_info")
+        if infoValid and info.lower() == "true":
+            self.log_info = True
+        else:
+            self.log_info = False
+
         # map shared hosts to lists of their configs
         shost2configs = {}
         shared_hosts, normal_hosts = self.config_shared_hosts()
@@ -125,15 +161,15 @@ class ConfigPage(Resource):
             if not valid:
                 continue
             if not inherit in sh_set:
-                print >> sys.stderr, ("warning: host wants to %s inherit from %s, but %s is not a shared host" 
-                                      % (host, inherit, inherit))
+                self.log("host wants to %s inherit from %s, but %s is not a shared host" 
+                                      % (host, inherit, inherit), LOG_WARNING)
                 continue
             
             # add all the shared host's configs to the current host
             for name,sources,pre,post in shost2configs[inherit]:
                 key = (host, name)
                 if host in self.host2config and name in self.host2config[host]:
-                    print >> sys.stderr, "error: config %s for host %s inherited more than once" % (name,host)
+                    self.log("config %s for host %s inherited more than once" % (name,host), LOG_ERR)
                     continue
                 if host not in self.host2config:
                     self.host2config[host] = {}
@@ -219,7 +255,7 @@ class ConfigPage(Resource):
                 sources, pre, post = [file], "", ""
             else:
                 sources, pre, post = ["UNKNOWN", "", ""]
-                print >> sys.stderr, "warning: could not find requested file: %s" % file
+                self.log("could not find requested file: %s" % file, LOG_WARNING)
             out['prehook'] = base64.b64encode(pre)
             out['posthook'] = base64.b64encode(post)
         return out
@@ -232,12 +268,12 @@ class ConfigPage(Resource):
         srckey = cfgkey+ '.source'
         name, nameValid = self.config.value(namekey)
         if not nameValid:
-            print >> sys.stderr, "error: config block missing name key: ",namekey
+            self.log("config block missing name key: %s" % namekey, LOG_ERR)
             return None
         for srcfilekey in self.config.children(srckey):
             filename, valid = self.config.value(srcfilekey)
             if not valid:
-                print >> sys.stderr, "error: error in config block with key: ",srcfilekey
+                self.log("error in config block with key: %s" % srcfilekey, LOG_ERR)
                 return None
             files.append(filename)
 
@@ -263,7 +299,7 @@ class ConfigPage(Resource):
                 posthook = f.read()
                 f.close()
         except IOError, e:
-            print >> sys.stderr, "IOError opening hook file:",e
+            self.log("IOError opening hook file: %s" % e, LOG_ERR)
 
         if not preValid:
             prehook = ""
@@ -327,7 +363,7 @@ class ConfigPage(Resource):
                     perm = thisperm
                 found = True
             except IOError, e:
-                print >> sys.stderr, "IOError opening file:",e
+                self.log("IOError opening file: %s" % e, LOG_ERR)
 
         # if file not found, check static dirs for it
         if found:
@@ -341,7 +377,7 @@ class ConfigPage(Resource):
                 perm = stat.S_IMODE(os.stat(filepath).st_mode)
                 return (out, perm)
             except IOError, e:
-                print >> sys.stderr, "IOError opening file:",e
+                self.log("IOError opening file: %s" % e, LOG_ERR)
 
         return (None, None)
 
@@ -401,14 +437,14 @@ class ConfigPage(Resource):
     def verifyCallback(self, connection, x509, errnum, errdepth, ok):
         """ Determine whether the SSL connection should be allowed """
         if not ok:
-            print 'info: invalid cert received:', x509.get_subject()
+            self.log("invalid cert received: %s" % x509.get_subject(), LOG_INFO)
             return False
 
         if self.config_fingerprint_valid(x509.get_subject().commonName, x509.digest("sha512")):
             return True
         else:
             # unknown host
-            print 'warning: denying connection from a cert that validates but does not exist in the config:', x509.get_subject(), x509.digest("sha512")
+            self.log("denying connection from a cert that validates but does not exist in the config: %s" % x509.get_subject(), x509.digest("sha512"), LOG_WARNING)
             return False
 
     def handle_sigusr2(self, signum, frame):

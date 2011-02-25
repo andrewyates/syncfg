@@ -1,3 +1,9 @@
+# log to syslog? if false, messages will be sent to stdout or stderr 
+syslog = "false";
+
+# log informative messages? if false, INFO messages will not be sent to syslog and nothing will be sent to stdout
+log_info = "false";
+
 # CA's FQDN
 CA = "ca.fqdn.yourdomain.org";
 # CA's SHA512 fingerprint
