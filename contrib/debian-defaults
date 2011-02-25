@@ -1,0 +1,12 @@
+# syncfgd configuration options
+
+# User and group to run syncfd as
+#USER='nobody'
+#GROUP='nobody'
+
+# syncfgd's base directory
+# This must be readable and writable by USER and should not be readable by anyone else
+#BASEDIR='~/.config/syncfgd/'
+
+# Location of the syncfgd wrapper script
+#DAEMON='/usr/local/bin/syncfgd'
