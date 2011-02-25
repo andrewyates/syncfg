@@ -89,6 +89,9 @@ class ConfigPage(Resource):
             if valid: dirs.append(dir)
         
         self.host2dir[host] = dirs
+
+        self.config_cache_dirfiles(host)
+
         return dirs
 
     def config_load(self):
@@ -102,7 +105,9 @@ class ConfigPage(Resource):
         self.fqdn2name = {}   # caches FQDN to host name mappings
         self.host2config = {} # caches host name to config name to config files mappings (host -> name -> file list)
         self.host2dir = {}    # caches host name to static directory list mappings
+        self.host2dirfiles = {} # caches host name to list of files in static directories mappings
         self.cached_host_configs = set([])
+        self.cached_host_dirfiles = set([])
 
         # map shared hosts to lists of their configs
         shost2configs = {}
@@ -283,7 +288,23 @@ class ConfigPage(Resource):
             if not host in self.host2config:
                 self.host2config[host] = {}
             self.host2config[host][name] = (files, pre, post) # cache list of file's sources and hooks
+
         self.cached_host_configs.add(host)
+
+    def config_cache_dirfiles(self, host):
+        """ Cache all files in static directories """
+        if host in self.cached_host_dirfiles: # already cached?
+            return
+
+        # cache files in static directories
+        dirout = {'dirs': [], 'files': []}
+        for dir in self.host2dir[host]:
+            os.path.walk(os.path.join(self.DIR_DIR,dir), self.walk_dir, dirout)
+        for file in dirout["files"]:
+            if not host in self.host2dirfiles:
+                self.host2dirfiles[host] = []
+            self.host2dirfiles[host].append(file)
+            
 
     def get_file(self, file, host):
         """ Find file and return a (file, permissions) pair """
@@ -306,24 +327,16 @@ class ConfigPage(Resource):
         # if file not found, check static dirs for it
         if found:
             return (out, perm)
-        else:
-            dirs = self.config_get_dirs(host)
-            inStaticDir = False
-            for dir in dirs:
-                if file.find(dir) == 0:
-                    inStaticDir = True
-                    break
-
-            if inStaticDir:
-                try:
-                    filepath = os.path.join(self.DIR_DIR,file)
-                    f = open(filepath)
-                    out += f.read()
-                    f.close()
-                    perm = stat.S_IMODE(os.stat(filepath).st_mode)
-                    return (out, perm)
-                except IOError, e:
-                    print >> sys.stderr, "IOError opening file:",e
+        elif file in self.host2dirfiles[host]:
+            try:
+                filepath = os.path.join(self.DIR_DIR,file)
+                f = open(filepath)
+                out += f.read()
+                f.close()
+                perm = stat.S_IMODE(os.stat(filepath).st_mode)
+                return (out, perm)
+            except IOError, e:
+                print >> sys.stderr, "IOError opening file:",e
 
         return (None, None)
 
