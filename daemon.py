@@ -129,7 +129,6 @@ class ConfigPage(Resource):
         self.cached_host_configs = set([])
         self.cached_host_dirfiles = set([])
 
-        
         # log to syslog?
         syslogValue, syslogValid = self.config.value("syslog")
         if syslogValid and syslogValue.lower() == "true":
@@ -144,6 +143,8 @@ class ConfigPage(Resource):
             self.log_info = True
         else:
             self.log_info = False
+
+        self.log("loading config", LOG_INFO)
 
         # map shared hosts to lists of their configs
         shost2configs = {}
