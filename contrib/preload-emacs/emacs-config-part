@@ -1,0 +1,7 @@
+; bind C-x C-c to delete-frame
+; for use with emacsclient, so that exiting a client doesn't close the preloaded emacs
+(defun delete-frame-force ()
+  (interactive)
+  (delete-frame (selected-frame) t))
+(global-set-key "\C-x\C-c" 'delete-frame)
+

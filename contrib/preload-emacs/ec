@@ -1,0 +1,21 @@
+#!/bin/zsh
+
+# Opens files with emacsclient. Use in conjunction with preload-emacs.
+# Usage: ec <files or args to send to emacsclient>
+
+if [[ $TERM == "screen" ]]; then
+    SERVERNAME="emacs-"`echo $STY|sed -e 's/[0-9]*\.//'`
+else
+    SERVERNAME="preload"
+fi
+
+# Attempt to connect to an existing server
+
+emacsclient -t -s $SERVERNAME -- $*
+if [ $? -ne 0 ]
+then
+  # Start a new emacs server and connect
+  preload-emacs 
+  sleep 2s
+  emacsclient -t -s $SERVERNAME -- $*
+fi
