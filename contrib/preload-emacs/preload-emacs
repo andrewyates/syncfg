@@ -25,7 +25,7 @@ screendir="/var/run/screen/S-$USER"
 serverdir="/tmp/emacs$UID"
 emacs=/usr/bin/emacs
 
-if [[ $# -gt 2 ]]; then
+if [[ $# -gt 1 ]]; then
   echo "Usage: preload-emacs [waitp]"
   exit 1
 fi
