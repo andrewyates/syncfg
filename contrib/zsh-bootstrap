@@ -22,6 +22,32 @@ UPDATER="$HOME/.config/syncfg/updater"
 # temporary update log. written once every time this script is run
 TMPLOG="$HOME/.config/syncfg/.updatelog"
 
+# location of lock file. used to prevent two syncfg instances from running at once
+LOCK="$HOME/.config/syncfg/.lock"
+
+TRAPUSR1() {
+  [[ -o zle ]] && zle -I  # Invalidate zle display
+  new=`cat $RPROMPT_FILE`
+  export RPROMPT=$new
+}
+
+# check lock file and don't update if either
+# 1) $LOCK exists and contains a date < 30 seconds ago
+# or 2) $LOCK exists and was modified < 60 seconds ago
+# (2) is intended to handle crashes
+cutoff=$[`date +%s` - 30]
+if [[ -e $LOCK && ((`cat $LOCK` -gt 0 && `cat $LOCK` -lt  $cutoff) ||
+      `stat -c "%Z" $LOCK` -lt $[$cutoff - 30]) ]]; then
+        date +%s > $LOCK
+elif [[ ! -e $LOCK ]]; then
+        date +%s > $LOCK
+else
+        # another instance is updating, so don't update here
+        sleep 1
+        source $ZSHRC
+        return
+fi
+
 $SYNCFG -v -f $ZSHRC > $TMPLOG
 
 # if exit status is != 0, print error
@@ -33,14 +59,10 @@ grep -v ": ok$" $TMPLOG
 
 touch $RPROMPT_FILE
 
-TRAPUSR1() {
-  [[ -o zle ]] && zle -I  # Invalidate zle display
-  new=`cat $RPROMPT_FILE`
-  export RPROMPT=$new
-}
-
 source $ZSHRC
 
 echo -n $RPROMPT > $RPROMPT_BACKUP
 
 $UPDATER "$SYNCFG" "$RPROMPT_FILE" "$RPROMPT_BACKUP" & disown
+
+rm -f $LOCK
