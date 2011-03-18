@@ -92,7 +92,7 @@ class Retriever:
             
         # write any hooks the file may have
         for hook in ['prehook', 'posthook']:
-            if hook in resp and resp['prehook'] != "":
+            if hook in resp and resp[hook] != "":
                 try:
                     name = hook+"_"+sanefn
                     hookfile = os.path.join(HOOK_DIR, name)
