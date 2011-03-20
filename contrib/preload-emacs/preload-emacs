@@ -14,7 +14,7 @@
 # Based on http://www.enigmacurry.com/2007/05/24/multi-tty-emacs-on-gentoo-and-ubuntu/
 # which was based on http://emacslife.blogspot.com/2007/05/multi-tty-emacs.html
 
-if [[ $TERM == "screen" ]]; then
+if [[ $TERM == "screen" && $STY != "" ]]; then
     name="emacs-"`echo $STY|sed -e 's/[0-9]*\.//'`
 else
     name="preload"
