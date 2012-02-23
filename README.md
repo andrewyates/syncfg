@@ -28,8 +28,7 @@ Setup
 =====
 Server
 ------
-- Create a CA, create a server cert signed with it, create client certs signed with it, and distribute the client certs to your clients
-  The easy-rsa scripts from OpenVPN are the easiest way to do this. See /usr/share/doc/openvpn/examples/easy-rsa/2.0
+- Create a CA, create a server cert signed with it, create client certs signed with it, and distribute the client certs to your clients.  The easy-rsa scripts from OpenVPN are the easiest way to do this. See /usr/share/doc/openvpn/examples/easy-rsa/2.0
 - On the server, the following certs should be present in the base directory (~/.config/syncfgd/):
   keys/ca.crt
   keys/server.crt
@@ -54,6 +53,10 @@ Client
 - To update specific resources on a client, run: ./syncfg -f ~/.a_file_to_update -f ~/file2 -d ~/dir1 -d ~/dir2
 - To view all managed configs and dirs for a host, run: ./syncfg -l
 - Use --verbose or the -v flag to see information on each file and directory that is processed
+
+Security
+========
+While syncfg uses OpenSSL, its use of OpenSSL hasn't been audited by a 3rd party. You should use it with OpenVPN or IPSEC.
 
 License
 =======
