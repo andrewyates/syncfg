@@ -37,14 +37,14 @@ Server
   If you want to store the SSL certs in an alternate location, edit service.tac.
 - Rename config.sample to config, copy to your base directory (~/.config/syncfgd/), and edit it
 - Create your config file parts in the configs directory in your base directory (~/.config/syncfgd/configs)
-
-  By convention config parts are placed in a directory named after the config file they are used to generate.
-  For example, the config parts used to generate .zshrc might be stored in "~/.config/syncfgd/configs/zshrc/common" and "~/.config/syncfgd/configs/zshrc/emacsclient"
 - Populate the dirs directory with any required static files (~/.config/syncfgd/dirs)
 - You have two options for launching the daemon:
       1. Launch the daemon with twistd -ny service.tac or use the start-server.sh and stop-server.sh scripts
       2. Run the daemon as a system service. A Debian init script and defaults file (/etc/default/syncfgd) are included in contrib/. If you choose this route you will likely want to change the BASEDIR and/or USER in /etc/default/syncfgd
 - To reload the config file, send SIGUSR2 to the daemon's process
+
+  By convention config parts are placed in a directory named after the config file they are used to generate.
+  For example, the config parts used to generate .zshrc might be stored in "~/.config/syncfgd/configs/zshrc/common" and "~/.config/syncfgd/configs/zshrc/emacsclient"
 
 Client
 ------
