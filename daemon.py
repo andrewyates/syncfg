@@ -244,8 +244,6 @@ class ConfigPage(Resource):
         out['latest_hash'] = self.get_latest_hash(file, host)
         if out['your_hash'] == out['latest_hash']: 
             out['status'] = "ok" 
-        elif out['latest_hash'] == "":
-            out['status'] = "missing"
         else:
             out['status'] = "outdated"
             contents, perms = self.get_file(file, host)
