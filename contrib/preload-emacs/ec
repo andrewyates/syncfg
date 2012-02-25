@@ -3,7 +3,7 @@
 # Opens files with emacsclient. Use in conjunction with preload-emacs.
 # Usage: ec <files or args to send to emacsclient>
 
-if [[ $TERM == "screen" ]]; then
+if [[ $TERM == "screen" && $STY != "" ]]; then
     SERVERNAME="emacs-"`echo $STY|sed -e 's/[0-9]*\.//'`
 else
     SERVERNAME="preload"
